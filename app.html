@@ -1,0 +1,1400 @@
+<title>Do Lixo à Luz</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Jornada gamificada sobre resíduos sólidos, conversão energética e fluidodinâmica computacional (PIC-Jr 2026).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: trilha de jogo vertical — barra superior com XP, coluna de até 1080px, fases como paradas numeradas de uma trilha */
+:root{
+  --bg:#EAF5EF; --surface:#FFFFFF; --surface-2:#DCEEE4; --ink:#11302A; --muted:#536D66; --line:#C6DDD1;
+  --brand:#0A9A68; --brand-deep:#067A52; --on-brand:#FFFFFF;
+  --sun:#FFB01F; --sun-deep:#D08600; --on-sun:#2A1C00;
+  --flame:#EE5330; --sky:#2A7BDE; --violet:#7B3FB5;
+  --good:#0E9A4A; --bad:#D83A42; --good-bg:#DBF5E5; --bad-bg:#FDE4E4;
+  --bin-azul:#1F5FD1; --bin-vermelho:#D63434; --bin-verde:#1C9646; --bin-amarelo:#F2B705; --bin-marrom:#8A5A2B;
+  --bin-preto:#2A2A2A; --bin-laranja:#EF7A12; --bin-cinza:#7A878C; --bin-branco:#EDEDED; --bin-roxo:#7B3FB5;
+  --font-display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:18px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1B18; --surface:#142824; --surface-2:#1B352F; --ink:#E5F4EE; --muted:#97B2AA; --line:#2A4740;
+    --brand:#22C38A; --brand-deep:#11905E; --on-brand:#04251A;
+    --sun:#FFC247; --sun-deep:#B87D00; --on-sun:#2A1C00;
+    --flame:#FF7553; --sky:#62A7F6; --violet:#B48AE6;
+    --good:#43D282; --bad:#FF6F74; --good-bg:#153A2A; --bad-bg:#3F1D21;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1B18; --surface:#142824; --surface-2:#1B352F; --ink:#E5F4EE; --muted:#97B2AA; --line:#2A4740;
+  --brand:#22C38A; --brand-deep:#11905E; --on-brand:#04251A;
+  --sun:#FFC247; --sun-deep:#B87D00; --on-sun:#2A1C00;
+  --flame:#FF7553; --sky:#62A7F6; --violet:#B48AE6;
+  --good:#43D282; --bad:#FF6F74; --good-bg:#153A2A; --bad-bg:#3F1D21;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:400;line-height:1.1;margin:0;text-wrap:balance;letter-spacing:.01em}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:8px}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.muted{color:var(--muted)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-weight:900;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* Botões de jogo */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;font-family:var(--font-display);font-size:1.05rem;letter-spacing:.02em;padding:.75em 1.3em;border-radius:14px;border:0;cursor:pointer;background:var(--brand);color:var(--on-brand);box-shadow:0 4px 0 var(--brand-deep);transition:transform .08s,box-shadow .08s,filter .15s;text-decoration:none}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--brand-deep)}
+.btn.sun{background:var(--sun);color:var(--on-sun);box-shadow:0 4px 0 var(--sun-deep)}
+.btn.sun:active{box-shadow:0 1px 0 var(--sun-deep)}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:0 4px 0 var(--line);border:2px solid var(--line)}
+.btn.ghost:active{box-shadow:0 1px 0 var(--line)}
+.btn.small{font-size:.9rem;padding:.5em .9em;border-radius:11px}
+.btn.danger{background:var(--bad);color:#fff;box-shadow:0 4px 0 color-mix(in srgb,var(--bad) 70%,#000)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.linkbtn{background:none;border:0;padding:0;color:var(--brand);font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+.card{background:var(--surface);border:2px solid var(--line);border-radius:var(--r);padding:20px}
+
+/* Barra superior */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:2px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:8px;background:none;border:0;cursor:pointer;padding:0}
+.logo span{font-family:var(--font-display);font-size:1.35rem;color:var(--ink)}
+.nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.nav button{background:none;border:0;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer;color:var(--muted)}
+.nav button[aria-current="page"],.nav button:hover{background:var(--surface-2);color:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--surface-2);border-radius:999px;padding:4px 12px 4px 4px;font-weight:800}
+.ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:1.2rem;background:var(--sun);flex:none}
+.ava.big{width:64px;height:64px;font-size:2.2rem}
+
+/* Login */
+.login{min-height:100vh;display:grid;align-items:center;padding-block:32px}
+.login-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.hero-title{font-size:clamp(2.8rem,7vw,5.2rem);line-height:.95;color:var(--ink)}
+.hero-title em{font-style:normal;color:var(--brand);display:block}
+.hero-title b{font-weight:400;color:var(--sun-deep)}
+.bins-strip{display:flex;gap:8px;margin-top:24px;flex-wrap:wrap}
+.bins-strip i{width:38px;height:50px;border-radius:6px 6px 10px 10px;position:relative;display:block;animation:bob 2.8s ease-in-out infinite}
+.bins-strip i::before{content:"";position:absolute;left:-3px;right:-3px;top:-8px;height:8px;border-radius:5px;background:inherit;filter:brightness(.8)}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.lead{font-size:1.15rem;max-width:34ch;margin-top:16px;color:var(--muted)}
+form .field{display:grid;gap:6px;margin-bottom:14px}
+label.lbl{font-weight:800;font-size:.92rem}
+input[type=text],input[type=password],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:.7em .9em;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:none}
+.ava-pick{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.ava-pick button{aspect-ratio:1;max-width:100%;border-radius:12px;border:2px solid var(--line);background:var(--bg);font-size:1.5rem;cursor:pointer;display:grid;place-items:center}
+.ava-pick button[aria-pressed="true"]{border-color:var(--brand);background:var(--good-bg);transform:scale(1.06)}
+.err{color:var(--bad);font-weight:700;font-size:.9rem;min-height:1.3em}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.quick button{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px 4px 4px;font-weight:800;cursor:pointer}
+.quick button .ava{width:28px;height:28px;font-size:1rem}
+
+/* Hub */
+.hub{padding-block:24px 48px;display:grid;gap:24px}
+.hello{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center}
+.xpbar{height:14px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--sun),var(--flame));border-radius:999px;transition:width .6s}
+.hub-grid{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+.trail{position:relative;display:grid;gap:18px;padding-left:0}
+.trail::before{content:"";position:absolute;left:35px;top:30px;bottom:30px;border-left:4px dashed var(--line)}
+.stop{position:relative;display:grid;grid-template-columns:74px 1fr;gap:16px;align-items:center}
+.stop .num{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-display);font-size:2rem;color:#fff;background:var(--pc);box-shadow:0 5px 0 color-mix(in srgb,var(--pc) 65%,#000);position:relative;z-index:1}
+.stop.locked .num{background:var(--surface-2);color:var(--muted);box-shadow:0 5px 0 var(--line)}
+.stop .card{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:16px 18px}
+.stop.locked .card{opacity:.7}
+.stop h3{font-size:1.35rem}
+.stars{color:var(--sun-deep);letter-spacing:2px;font-size:1.1rem;white-space:nowrap}
+.stars .off{color:var(--line)}
+.side{display:grid;gap:16px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.badge{display:grid;justify-items:center;text-align:center;gap:2px;padding:8px 4px;border-radius:14px;background:var(--surface-2);font-size:.72rem;font-weight:800;line-height:1.2}
+.badge b{font-size:1.6rem;line-height:1.2;font-weight:400}
+.badge.off{opacity:.35;filter:grayscale(1)}
+.rank{display:grid;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.rank li{display:grid;grid-template-columns:22px 28px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border-radius:10px}
+.rank li.me{background:var(--good-bg)}
+.rank .ava{width:28px;height:28px;font-size:1rem}
+.watt{display:flex;gap:12px;align-items:flex-start}
+.bubble{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px;position:relative;font-weight:600}
+.bubble::before{content:"";position:absolute;left:-9px;top:16px;width:14px;height:14px;background:var(--surface);border-left:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg)}
+
+/* Fase */
+.phase{padding-block:20px 56px;display:grid;gap:18px}
+.phase-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.phase-head .num{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-display);font-size:1.6rem;color:#fff;background:var(--pc);box-shadow:0 4px 0 color-mix(in srgb,var(--pc) 65%,#000)}
+.phase-head h1{font-size:clamp(1.7rem,4vw,2.4rem)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:2px solid var(--line)}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:900;cursor:pointer;color:var(--muted);border-radius:12px 12px 0 0;margin-bottom:-2px;border-bottom:4px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--pc)}
+.learn{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.learn .card h3{font-size:1.3rem;margin-bottom:8px;color:var(--ink)}
+.learn .card p+p,.learn .card p+ul,.learn .card ul+p{margin-top:8px}
+.learn ul{margin:6px 0 0;padding-left:1.2em}
+.learn li+li{margin-top:4px}
+.learn .wide{grid-column:1/-1}
+.bigfact{font-family:var(--font-display);font-size:2.4rem;color:var(--pc);line-height:1}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.binpal{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.binpal div{border-radius:10px;padding:10px 6px;text-align:center;font-weight:800;font-size:.8rem;color:#fff}
+.layers{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:10px;font-weight:900;font-size:.8rem}
+.layers span{display:grid;place-items:center;color:#fff}
+.hier{display:grid;gap:6px;margin-top:10px;counter-reset:h}
+.hier div{padding:8px 12px;border-radius:10px;background:var(--surface-2);font-weight:800}
+.hier div:nth-child(5){outline:3px solid var(--sun)}
+.learn-cta{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+/* Quiz */
+.quiz{display:grid;gap:16px;max-width:820px;margin:0 auto;width:100%}
+.qhead{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;font-weight:900}
+.prog{height:12px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--pc);transition:width .4s}
+.qcard{text-align:center;display:grid;gap:8px;justify-items:center;padding:24px 18px}
+.qitem{font-size:4.2rem;line-height:1;animation:pop .35s ease-out}
+.qname{font-family:var(--font-display);font-size:1.7rem}
+.prompt{font-weight:800;color:var(--muted);font-size:1.05rem}
+@keyframes pop{0%{transform:scale(.6);opacity:.3}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+.opts{display:grid;gap:12px}
+.opts-cat{grid-template-columns:repeat(2,minmax(0,1fr))}
+.opts-bin{grid-template-columns:repeat(4,minmax(0,1fr))}
+.opts-duel{grid-template-columns:1fr auto 1fr;align-items:stretch}
+.opts-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+.opt{border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:14px;cursor:pointer;text-align:left;display:grid;gap:2px;font-weight:800;box-shadow:0 4px 0 var(--line);transition:transform .08s}
+.opt:hover:not([disabled]){border-color:var(--pc)}
+.opt:active:not([disabled]){transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+.opt[disabled]{cursor:default}
+.opt small{font-weight:600;color:var(--muted)}
+.opt.ok{background:var(--good-bg);border-color:var(--good);box-shadow:0 4px 0 var(--good)}
+.opt.no{background:var(--bad-bg);border-color:var(--bad);box-shadow:0 4px 0 var(--bad);animation:shake .35s}
+.opt.dim{opacity:.5}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.opt-cat{grid-template-columns:auto 1fr;align-items:center;gap:12px;color:var(--ink)}
+.opt-cat .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:1.5rem;background:var(--c)}
+.opt-bin{background:var(--c);border:0;color:#fff;text-align:center;justify-items:center;padding:22px 8px 14px;border-radius:8px 8px 16px 16px;position:relative;margin-top:10px;box-shadow:0 4px 0 color-mix(in srgb,var(--c) 60%,#000)}
+.opt-bin::before{content:"";position:absolute;left:-5px;right:-5px;top:-10px;height:12px;border-radius:6px;background:var(--c);filter:brightness(.82)}
+.opt-bin.dark-text{color:#2A1C00}
+.opt-bin .ic{font-size:1.4rem}
+.opt-bin.ok{outline:4px solid var(--good);outline-offset:3px;background:var(--c);box-shadow:0 4px 0 var(--good)}
+.opt-bin.no{outline:4px solid var(--bad);outline-offset:3px;background:var(--c);box-shadow:0 4px 0 var(--bad)}
+.opt-duel{justify-items:center;text-align:center;padding:22px 12px;font-size:1.1rem}
+.opt-duel .ic{font-size:3.4rem;line-height:1.1}
+.opt-duel .val{font-family:var(--font-mono);font-size:1.1rem;margin-top:6px}
+.meter{width:100%;height:10px;border-radius:999px;background:var(--surface-2);margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--sun),var(--flame))}
+.vs{align-self:center;font-family:var(--font-display);font-size:1.6rem;color:var(--flame)}
+.fb{border-radius:16px;padding:16px 18px;display:grid;gap:8px;border:2px solid}
+.fb.ok{background:var(--good-bg);border-color:var(--good)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:1.3rem}
+.fb .row{display:flex;justify-content:flex-end}
+.result{text-align:center;display:grid;gap:14px;justify-items:center;padding:32px 20px}
+.result .stars{font-size:3rem;letter-spacing:6px}
+.result h2{font-size:2.2rem}
+.newbadge{display:inline-flex;gap:10px;align-items:center;background:var(--surface-2);padding:10px 16px;border-radius:14px;font-weight:800}
+.newbadge b{font-size:2rem;font-weight:400}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+/* Calculadora */
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.slider{display:grid;gap:4px;margin-bottom:16px}
+.slider .top-row{display:flex;justify-content:space-between;gap:8px;font-weight:800}
+input[type=range]{width:100%;accent-color:var(--pc,var(--brand))}
+.outs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.out{background:var(--surface-2);border-radius:14px;padding:12px}
+.out .v{font-family:var(--font-display);font-size:1.7rem;line-height:1.1}
+.out .u{font-size:.85rem;color:var(--muted);font-weight:700}
+.bars{display:grid;gap:8px;margin-top:12px}
+.bars div{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:.85rem;font-weight:800}
+.bars span.b{height:14px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.bars span.b i{display:block;height:100%;border-radius:999px}
+.eq{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.eq div{text-align:center;padding:10px 6px;border-radius:14px;border:2px dashed var(--line);font-weight:800;font-size:.85rem}
+.eq b{display:block;font-family:var(--font-display);font-weight:400;font-size:1.5rem}
+.note{font-size:.82rem;color:var(--muted)}
+
+/* Simuladores */
+.sim{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+.simcanvas{background:#0B1E2E;border-radius:16px;display:block;max-width:100%;border:2px solid var(--line)}
+.regime{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-weight:900;color:#fff;background:var(--rc,#666)}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.kv div{background:var(--surface-2);border-radius:12px;padding:10px}
+.kv small{display:block;font-weight:800;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+.kv b{font-family:var(--font-mono);font-size:1.05rem}
+.missions{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.missions li{display:flex;gap:10px;align-items:center;font-weight:700;padding:8px 10px;border-radius:12px;background:var(--surface-2)}
+.missions li.done{background:var(--good-bg)}
+.missions li i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--line);flex:none;font-size:.85rem}
+.missions li.done i{background:var(--good);border-color:var(--good);color:#fff}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pc,var(--brand));border-color:var(--pc,var(--brand));color:#fff}
+.cfdbox{display:grid;gap:12px}
+.cfd-wrap{position:relative;max-width:100%}
+.cfd-wrap canvas{width:100%;height:auto;aspect-ratio:2/1;touch-action:none;cursor:crosshair}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none;counter-reset:st}
+.steps li{counter-increment:st;background:var(--surface-2);border-radius:14px;padding:10px 12px;font-size:.9rem}
+.steps li::before{content:counter(st);display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--pc);color:#fff;font-family:var(--font-display);margin-right:6px}
+.steps b{display:inline}
+.checks{display:flex;gap:14px;flex-wrap:wrap;font-weight:800}
+.checks label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+
+/* Professor */
+.teacher{padding-block:24px 56px;display:grid;gap:18px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:14px}
+.stat b{display:block;font-family:var(--font-display);font-size:2rem;font-weight:400;line-height:1.1}
+.stat span{font-weight:800;color:var(--muted);font-size:.85rem}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.pbar{display:grid;grid-template-columns:150px 1fr 48px;gap:10px;align-items:center;font-weight:800;font-size:.9rem;margin-top:8px}
+.pbar span.b{height:14px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+.pbar span.b i{display:block;height:100%;border-radius:999px}
+.switch{display:flex;gap:10px;align-items:center;font-weight:800;cursor:pointer}
+.switch input{width:20px;height:20px;accent-color:var(--brand)}
+textarea{min-height:110px;font-family:var(--font-mono);font-size:.8rem}
+
+/* Sobre / certificado */
+.about{padding-block:24px 56px;display:grid;gap:18px}
+.about .two .card h3{font-size:1.3rem;margin-bottom:8px}
+.about ul,.about ol{margin:6px 0 0;padding-left:1.2em}
+.about li+li{margin-top:4px}
+.cert{max-width:760px;margin:24px auto;text-align:center;padding:40px 28px;border:6px double var(--brand);border-radius:24px;background:var(--surface);display:grid;gap:12px;justify-items:center}
+.cert h1{font-size:clamp(2rem,6vw,3.2rem);color:var(--brand)}
+.cert .who{font-family:var(--font-display);font-size:clamp(1.6rem,5vw,2.4rem)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:800;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;height:100%}
+
+@media (max-width:860px){
+  .login-grid,.hub-grid,.calc,.sim,.two{grid-template-columns:1fr}
+  .learn{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .steps{grid-template-columns:1fr 1fr}
+}
+@media (max-width:560px){
+  .opts-cat,.opts-list{grid-template-columns:1fr}
+  .opts-bin{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .opts-duel{grid-template-columns:1fr}
+  .vs{justify-self:center}
+  .hello{grid-template-columns:auto 1fr}
+  .hello .btn{grid-column:1/-1}
+  .stop{grid-template-columns:54px 1fr;gap:10px}
+  .stop .num{width:54px;height:54px;font-size:1.5rem}
+  .trail::before{left:25px}
+  .stop .card{grid-template-columns:1fr}
+  .ava-pick{grid-template-columns:repeat(4,1fr)}
+  .binpal{grid-template-columns:repeat(2,1fr)}
+  .kv,.eq,.steps{grid-template-columns:1fr 1fr}
+  .outs{grid-template-columns:1fr}
+  .bars div{grid-template-columns:90px 1fr 60px}
+  .pbar{grid-template-columns:100px 1fr 44px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div id="app"></div>
+<canvas id="confetti" hidden></canvas>
+<div class="toast" id="toast" role="status" hidden></div>
+<noscript><p style="padding:20px">Ative o JavaScript para jogar.</p></noscript>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- armazenamento ---------- */
+const KEY = 'dolixoaluz.v1';
+let memStore = null;
+function freshStore(){ return {v:1, users:{}, currentId:null, pin:null, unlockAll:false, sound:true}; }
+function loadStore(){
+  try{ const r = localStorage.getItem(KEY); if(r){ const s = JSON.parse(r); if(s && s.users) return Object.assign(freshStore(), s); } }catch(e){}
+  return memStore || freshStore();
+}
+let store = loadStore();
+function save(){ memStore = store; try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+
+/* ---------- utilidades ---------- */
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d) => Number(n).toLocaleString('pt-BR', {maximumFractionDigits: d == null ? 1 : d, minimumFractionDigits: 0});
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const shuffle = a => { a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let toastTimer = null;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+
+/* ---------- som ---------- */
+let actx = null;
+function beep(type){
+  if(!store.sound) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = type === 'ok' ? [660, 880] : type === 'bad' ? [240, 180] : [523, 659, 784, 1047];
+    const t0 = actx.currentTime;
+    notes.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type === 'bad' ? 'square' : 'triangle'; o.frequency.value = f;
+      const s = t0 + i * 0.09;
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(type === 'bad' ? 0.05 : 0.12, s + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.2);
+      o.connect(g); g.connect(actx.destination); o.start(s); o.stop(s + 0.22);
+    });
+  }catch(e){}
+}
+
+/* ---------- confete ---------- */
+function confetti(){
+  if(reduceMotion) return;
+  const cv = $('#confetti'); cv.hidden = false;
+  const dpr = window.devicePixelRatio || 1; cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const cols = ['#1F5FD1','#D63434','#1C9646','#F2B705','#8A5A2B','#EF7A12','#7B3FB5'];
+  const P = Array.from({length:140}, () => ({x: innerWidth/2 + (Math.random()-.5)*200, y: innerHeight*0.35, vx:(Math.random()-.5)*14, vy:-Math.random()*12-4, r:Math.random()*6+4, a:Math.random()*6, va:(Math.random()-.5)*.4, c:cols[Math.random()*cols.length|0]}));
+  let f = 0;
+  (function tick(){
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    P.forEach(p => { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.r/2, -p.r/4, p.r, p.r/2); ctx.restore(); });
+    if(++f < 150) requestAnimationFrame(tick); else { ctx.clearRect(0,0,innerWidth,innerHeight); cv.hidden = true; }
+  })();
+}
+
+/* ---------- desenhos ---------- */
+const LOGO = '<svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3C9 9 5 18 7 27c2 7 8 10 13 10s11-3 13-10c2-9-2-18-13-24z" fill="var(--brand)"/><path d="M22 10l-8 14h6l-2 10 9-15h-6l3-9z" fill="var(--sun)" stroke="var(--on-sun)" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+const WATT = '<svg width="64" height="70" viewBox="0 0 64 70" aria-hidden="true"><path d="M32 2c6 4 9 9 8 14-5 0-9-3-8-14z" fill="var(--brand)"/><circle cx="32" cy="38" r="26" fill="var(--sun)"/><rect x="22" y="60" width="20" height="8" rx="3" fill="var(--muted)"/><circle cx="23" cy="35" r="4.5" fill="#1b1b1b"/><circle cx="41" cy="35" r="4.5" fill="#1b1b1b"/><circle cx="24.5" cy="33.5" r="1.5" fill="#fff"/><circle cx="42.5" cy="33.5" r="1.5" fill="#fff"/><path d="M22 45c5 6 15 6 20 0" stroke="#1b1b1b" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="16" cy="44" r="4" fill="var(--flame)" opacity=".45"/><circle cx="48" cy="44" r="4" fill="var(--flame)" opacity=".45"/></svg>';
+
+/* ---------- conteúdo ---------- */
+const AVATARS = ['👩🏽‍🔬','👨🏿‍🔬','👩🏻‍🔬','👨🏼‍🔬','👩🏿‍🚀','👨🏽‍🚀','👩🏼‍🚀','👨🏾‍🚀'];
+const AVATAR_NAMES = ['Cientista','Cientista','Cientista','Cientista','Astronauta','Astronauta','Astronauta','Astronauta'];
+
+const CATS = [
+  {id:'org', label:'Orgânico', sub:'vira adubo ou biogás', e:'🍃', c:'var(--bin-marrom)'},
+  {id:'rec', label:'Reciclável seco', sub:'volta para a indústria', e:'♻️', c:'var(--bin-azul)'},
+  {id:'rej', label:'Rejeito', sub:'vai para o aterro sanitário', e:'🗑️', c:'var(--bin-cinza)'},
+  {id:'per', label:'Perigoso / especial', sub:'ponto de coleta', e:'⚠️', c:'var(--bin-laranja)'}
+];
+const F1 = [
+  ['banana','🍌','Casca de banana','org','Cascas são orgânicas: vão para a compostagem ou para o biodigestor e viram adubo ou biogás.'],
+  ['lata','🥫','Lata de molho de tomate','rec','Metal pode ser reciclado infinitas vezes. Dê uma enxaguada antes de descartar.'],
+  ['jornal','📰','Jornal velho','rec','Papel seco e limpo é reciclável e vira papel novo ou papelão.'],
+  ['tetra','🧃','Caixinha de suco (Tetra Pak)','rec','Embalagem cartonada é reciclável! Tem camadas de papel, plástico e alumínio. É o resíduo estudado no nosso projeto.'],
+  ['pilha','🔋','Pilha usada','per','Pilhas têm metais pesados. Vão para pontos de coleta (logística reversa), nunca para o lixo comum.'],
+  ['papelhig','🧻','Papel higiênico usado','rej','Está contaminado e não tem valor para reciclagem: é rejeito e vai para o aterro sanitário.'],
+  ['cafe','☕','Borra de café','org','Ótima para compostagem, porque é rica em nitrogênio.'],
+  ['vidro','🍾','Garrafa de vidro','rec','Vidro de embalagem é reciclável infinitas vezes sem perder qualidade.'],
+  ['lampada','💡','Lâmpada fluorescente','per','Contém mercúrio. Leve a um ponto de coleta de lâmpadas.'],
+  ['pizza','🍕','Caixa de pizza engordurada','rej','A gordura impede a reciclagem do papel. A parte limpa da tampa pode ir para o reciclável; a engordurada é rejeito.'],
+  ['xampu','🧴','Frasco de xampu vazio','rec','Frascos plásticos (PEAD, PP) são recicláveis. Enxágue antes.'],
+  ['celular','📱','Celular quebrado','per','Eletrônicos têm metais valiosos e substâncias tóxicas. Entregue em pontos de coleta de eletroeletrônicos.'],
+  ['folhas','🍂','Folhas secas e podas','org','Restos de jardim são orgânicos: compostagem ou biomassa para energia.'],
+  ['fralda','👶','Fralda descartável usada','rej','Mistura de materiais contaminados: é rejeito.'],
+  ['oleo','🛢️','Óleo de cozinha usado','per','Nunca jogue na pia: um litro contamina milhares de litros de água. Guarde numa garrafa PET e leve a um ponto de coleta. Ele pode virar biodiesel!']
+];
+
+const BINS = [
+  {id:'azul', label:'Azul', sub:'papel e papelão', c:'var(--bin-azul)', e:'📄'},
+  {id:'vermelho', label:'Vermelha', sub:'plástico', c:'var(--bin-vermelho)', e:'🧴'},
+  {id:'verde', label:'Verde', sub:'vidro', c:'var(--bin-verde)', e:'🍾'},
+  {id:'amarelo', label:'Amarela', sub:'metal', c:'var(--bin-amarelo)', e:'🥫', dark:true},
+  {id:'marrom', label:'Marrom', sub:'orgânico', c:'var(--bin-marrom)', e:'🍃'},
+  {id:'preto', label:'Preta', sub:'madeira', c:'var(--bin-preto)', e:'🪵'},
+  {id:'laranja', label:'Laranja', sub:'perigosos', c:'var(--bin-laranja)', e:'⚠️'},
+  {id:'cinza', label:'Cinza', sub:'não reciclável', c:'var(--bin-cinza)', e:'🗑️'}
+];
+const BINS_ALL = BINS.concat([
+  {id:'branco', label:'Branca', sub:'serviços de saúde', c:'var(--bin-branco)', dark:true},
+  {id:'roxo', label:'Roxa', sub:'radioativos', c:'var(--bin-roxo)'}
+]);
+const F2 = [
+  ['papelao','📦','Caixa de papelão','azul','Papelão vai na azul. Desmonte a caixa para ocupar menos espaço.'],
+  ['pet','🥤','Garrafa PET','vermelho','PET é plástico: lixeira vermelha. Ele pode virar fibra para roupas e novas garrafas.'],
+  ['pote','🫙','Pote de vidro de geleia','verde','Vidro de embalagem vai na verde.'],
+  ['latinha','🥫','Latinha de alumínio','amarelo','Metal vai na amarela. O Brasil recicla quase todas as latinhas de alumínio!'],
+  ['maca','🍎','Resto de maçã','marrom','Orgânico vai na marrom e pode virar adubo ou biogás.'],
+  ['pallet','🪵','Tábua de pallet','preto','Madeira vai na preta. Ela pode ser reaproveitada ou virar biomassa para energia.'],
+  ['bateria','🔋','Bateria de celular','laranja','Pilhas e baterias são perigosas: lixeira laranja ou ponto de coleta.'],
+  ['guardanapo','🧻','Guardanapo sujo','cinza','Papel sujo de comida não recicla: vai na cinza, a do rejeito.'],
+  ['tetra','🧃','Caixinha de leite (Tetra Pak)','azul','Cerca de 75% da caixinha é papel, então ela vai junto com o papel (azul). Onde a coleta seletiva é mista, vai com os recicláveis.'],
+  ['sacola','🛍️','Sacola plástica','vermelho','Sacola é plástico (polietileno): vermelha.'],
+  ['parafuso','🔩','Pregos e parafusos','amarelo','Metal vai na amarela. Embrulhe objetos pontudos para proteger os catadores.'],
+  ['ovo','🥚','Cascas de ovo','marrom','Orgânico: marrom. Na compostagem, as cascas acrescentam cálcio ao adubo.'],
+  ['caderno','📓','Folhas de caderno usadas','azul','Papel vai na azul. Retire a espiral de metal antes.'],
+  ['espelho','🪞','Espelho quebrado','cinza','Espelho, vidro de janela e cerâmica não reciclam junto com as garrafas porque têm outra composição. Embrulhe em jornal e descarte como rejeito.']
+];
+
+const MATS = {
+  pe:{e:'🛍️', n:'Sacola plástica (PE)', v:43}, ps:{e:'🥡', n:'Isopor (EPS)', v:40}, oleo:{e:'🛢️', n:'Óleo de cozinha', v:37},
+  pneu:{e:'🛞', n:'Pneu velho', v:32}, pet:{e:'🥤', n:'Garrafa PET', v:23}, tetra:{e:'🧃', n:'Tetra Pak', v:20},
+  coco:{e:'🥥', n:'Casca de coco seca', v:18}, madeira:{e:'🪵', n:'Madeira seca', v:16}, papel:{e:'📦', n:'Papelão', v:15},
+  bagaco:{e:'🎋', n:'Bagaço de cana úmido', v:7.5}, comida:{e:'🍲', n:'Restos de comida', v:4}, vidro:{e:'🍾', n:'Vidro', v:0}
+};
+const F3 = [
+  ['pe','comida','Plástico vem do petróleo: tem cerca de 10 vezes mais energia que restos de comida, que são uns 70% água.'],
+  ['tetra','papel','A camada de polietileno (uns 20% da caixinha) deixa a Tetra Pak mais energética que o papelão puro.'],
+  ['pneu','madeira','A borracha do pneu é feita de hidrocarbonetos, por isso tem o dobro da energia da madeira. Fornos de cimento usam pneus como combustível.'],
+  ['ps','pet','O PET tem oxigênio na molécula, como se já estivesse meio queimado. Por isso libera menos energia que o isopor (poliestireno).'],
+  ['oleo','bagaco','O bagaço úmido tem cerca de 50% de água. Mesmo assim, as usinas de cana queimam bagaço para gerar vapor e eletricidade.'],
+  ['vidro','coco','Vidro é mineral e não queima. A casca de coco seca é biomassa e serve bem como combustível.'],
+  ['papel','comida','Papel seco libera quase 4 vezes mais energia que comida molhada. Por isso orgânicos úmidos combinam mais com biodigestão.'],
+  ['madeira','ps','O isopor é leve, mas cada quilo carrega 2,5 vezes mais energia que a madeira.']
+];
+
+const TECH = {
+  bio:{n:'Biodigestão anaeróbia', s:'bactérias, sem oxigênio'},
+  inc:{n:'Incineração com recuperação de energia', s:'queima com excesso de ar'},
+  pir:{n:'Pirólise', s:'calor sem oxigênio'},
+  gas:{n:'Gaseificação em leito fluidizado', s:'calor com pouco oxigênio'},
+  trans:{n:'Transesterificação', s:'reação com álcool'},
+  cog:{n:'Queima em caldeira (cogeração)', s:'vapor + eletricidade'},
+  aterro:{n:'Captação de biogás do aterro', s:'drenos e queimadores'},
+  cop:{n:'Coprocessamento em fornos de cimento', s:'combustível alternativo'},
+  comp:{n:'Compostagem', s:'micro-organismos com oxigênio'},
+  ferm:{n:'Fermentação (etanol 2G)', s:'enzimas + leveduras'}
+};
+const F4 = [
+  ['cantina','🍲','Restos de comida da cantina','bio',['bio','inc','trans','pir'],'Úmidos e cheios de matéria orgânica: sem oxigênio, bactérias os transformam em biogás. O que sobra (digestato) é biofertilizante.'],
+  ['fritura','🍳','Óleo de fritura usado','trans',['trans','bio','gas','comp'],'Óleo + álcool + catalisador = biodiesel + glicerina.'],
+  ['plasticos','🛍️','Plásticos sujos e misturados','pir',['pir','comp','bio','ferm'],'Sem oxigênio, entre 300 e 700 °C, as longas cadeias do plástico se quebram em óleo, gás e carvão.'],
+  ['tetra','🧃','Tetra Pak picada (o resíduo do projeto)','gas',['gas','bio','trans','comp'],'No leito fluidizado o ar faz as partículas flutuarem, misturando e aquecendo tudo por igual. Com pouco oxigênio, papel e plástico viram gás de síntese e o alumínio pode ser recuperado. Antes disso, sempre que der, recicle!'],
+  ['rejeito','🗑️','Rejeito urbano misturado','inc',['inc','trans','comp','ferm'],'Usinas de recuperação energética queimam o rejeito entre 850 e 1100 °C, com filtros para os gases. O vapor gera eletricidade e o volume do lixo cai uns 90%.'],
+  ['bagaco','🎋','Bagaço de cana da usina','cog',['cog','trans','aterro','comp'],'Usinas de cana queimam bagaço em caldeiras: o vapor move a usina e a eletricidade que sobra vai para a rede.'],
+  ['esterco','🐄','Esterco de gado','bio',['bio','inc','trans','cop'],'Um clássico do campo: o biodigestor rural gera gás para o fogão e adubo para a lavoura.'],
+  ['pneus','🛞','Pneus velhos','cop',['cop','bio','comp','trans'],'Fornos de cimento passam de 1400 °C: o pneu vira combustível e o aço dele entra na composição do cimento.'],
+  ['aterro','⛰️','Aterro sanitário com 20 anos de lixo','aterro',['aterro','trans','pir','ferm'],'O lixo enterrado se decompõe sem ar e solta metano. Captar esse gás evita emissões e ainda gera energia.'],
+  ['palha','🌾','Palha e folhas de cana','ferm',['ferm','trans','aterro','cop'],'No etanol de segunda geração, enzimas quebram a celulose da palha em açúcares, que as leveduras fermentam.'],
+  ['poda','🌿','Podas do jardim (para adubar a horta)','comp',['comp','inc','trans','pir'],'Se o objetivo é adubar a horta, a rota é a compostagem: com oxigênio, micro-organismos transformam tudo em húmus.']
+];
+
+const F5 = [
+  ['biodig','🫧','O que sai de um biodigestor?',['Biogás (metano + CO₂) e biofertilizante','Biodiesel e glicerina','Gás de síntese (CO + H₂)','Etanol'],'O biogás tem de 50 a 70% de metano. O líquido que sobra é um ótimo adubo.'],
+  ['biometano','⛽','Biogás purificado, com mais de 90% de metano, se chama…',['Biometano','Hidrogênio verde','GLP (gás de cozinha)','Gás de síntese'],'Sem o CO₂, o biometano substitui o gás natural e o GNV dos carros. O GLP é outra coisa: propano e butano do petróleo.'],
+  ['syngas','🧃','A gaseificação da Tetra Pak produz principalmente…',['Gás de síntese (CO + H₂)','Biodiesel','Biometano','Só vapor d’água'],'Com pouco oxigênio, o carbono vira monóxido de carbono (CO) e hidrogênio (H₂): o gás de síntese, ou syngas.'],
+  ['pirolise','🛢️','A pirólise de plástico gera…',['Óleo pirolítico, gás e carvão','Só cinzas','Etanol e açúcar','Biofertilizante'],'O óleo pirolítico pode ser refinado como petróleo. O carvão sólido que sobra se chama char.'],
+  ['biodiesel','🍳','Na transesterificação, o óleo de cozinha usado vira…',['Biodiesel + glicerina','Biogás','Gás de síntese','Carvão vegetal'],'No Brasil, o diesel vendido nos postos já leva uma parte de biodiesel misturado.'],
+  ['turbina','⚡','Como uma usina de incineração gera eletricidade?',['O calor ferve água e o vapor gira uma turbina ligada a um gerador','O lixo gera eletricidade direto ao queimar','Painéis solares na chaminé','Baterias feitas de cinza'],'Quase todas as usinas térmicas funcionam assim: calor → vapor → turbina → gerador.'],
+  ['cdr','🧱','O que é CDR?',['Combustível Derivado de Resíduos: rejeito triturado e seco usado como combustível sólido','Um tipo de lixeira','Composto de Resíduos Recicláveis','Carvão de Reflorestamento'],'O CDR é muito usado em fornos de cimento no lugar do coque de petróleo.'],
+  ['metano','🔥','Qual gás do biogás dá energia a ele?',['Metano (CH₄)','Oxigênio (O₂)','Nitrogênio (N₂)','Hélio (He)'],'O metano queima e libera energia. Solto no ar, porém, esquenta o planeta cerca de 28 vezes mais que o CO₂.'],
+  ['sintese','🧪','O gás de síntese pode ser transformado em…',['Hidrogênio, metanol e combustíveis sintéticos','Vidro','Papel reciclado','Água potável'],'O syngas é um bloco de montar da química: com catalisadores vira hidrogênio, metanol e até diesel sintético.']
+];
+
+const F6 = [
+  ['malha','🧩','Em CFD, o que é a malha?',['A divisão do espaço em pequenas células onde as equações são resolvidas','A rede que segura as partículas no leito','Um tipo de filtro de ar','O gráfico final colorido'],'Quanto mais fina a malha, mais detalhes aparecem, mas o computador demora mais.'],
+  ['fixo','🧱','Com o ar abaixo da velocidade de mínima fluidização (umf), o leito fica…',['Fixo: o ar passa pelos espaços entre as partículas sem movê-las','Borbulhando','Vazio','Pegando fogo'],'Até a umf, o atrito do ar ainda é menor que o peso das partículas.'],
+  ['arraste','🌪️','Se o ar passa da velocidade terminal (ut), as partículas…',['São arrastadas para fora do reator (transporte pneumático)','Ficam paradas no fundo','Derretem','Viram líquido de verdade'],'Por isso reatores de leito circulante usam um ciclone para capturar as partículas e devolvê-las.'],
+  ['porque','🧃','Por que o leito fluidizado combina com resíduos misturados como a Tetra Pak?',['Mistura intensa e temperatura uniforme em todo o leito','Porque não precisa de ar','Porque funciona sem calor','Porque separa o lixo por cor'],'Partículas em movimento trocam calor muito rápido, e isso evita pontos frios e pontos quentes.'],
+  ['eqs','📐','O que um programa de CFD resolve em cada célula?',['A conservação de massa, de quantidade de movimento e de energia','Apenas a cor do fluido','A previsão do tempo da cidade','Contas de matemática financeira'],'As equações de Navier-Stokes descrevem a conservação da quantidade de movimento de um fluido.'],
+  ['maior','⚖️','Uma partícula maior e mais densa precisa de…',['Mais velocidade de ar para fluidizar','Menos velocidade de ar','Nenhum ar','Ar mais frio'],'Teste no simulador: troque Tetra Pak por areia, ou aumente o diâmetro, e veja a umf subir.'],
+  ['dp','📉','Depois que o leito fluidiza, a queda de pressão do ar…',['Fica praticamente constante, igual ao peso do leito dividido pela área','Cresce sem parar','Vira zero na hora','Fica negativa'],'Esse patamar no gráfico ΔP × velocidade é a assinatura da fluidização, e dá para medir no experimento do projeto.']
+];
+
+/* ---------- fases ---------- */
+function binPal(){ return '<div class="binpal">' + BINS_ALL.map(b => `<div style="background:${b.c};${b.dark ? 'color:#2A1C00' : ''}">${b.label}<br><small>${b.sub}</small></div>`).join('') + '</div>'; }
+
+const PHASES = [
+  { id:1, title:'Conhecer os resíduos', tag:'Orgânico, reciclável, rejeito ou perigoso?', pc:'var(--bin-verde)',
+    tip:'Antes de transformar lixo em energia, a gente precisa saber o que é cada coisa. Bora treinar o olho?',
+    learn:[
+      {h:'Resíduo ou rejeito?', b:'<p><b>Resíduo</b> é o que sobra de uma atividade e ainda tem valor: pode virar matéria-prima, adubo ou energia.</p><p><b>Rejeito</b> é o que não tem mais como aproveitar e deve ir para o aterro sanitário. Essa diferença está na Política Nacional de Resíduos Sólidos (Lei 12.305/2010).</p>'},
+      {h:'O tamanho do problema', b:'<p class="bigfact">81,8 mi t</p><p>de resíduos sólidos urbanos foram geradas no Brasil em 2023, cerca de <b>382 kg por pessoa</b> no ano, ou 1 kg por dia. Só uns <b>8%</b> são reciclados (Abrelpe, 2023).</p>'},
+      {h:'Os 4 grupos do jogo', b:'<ul><li><b>Orgânico:</b> restos de comida, cascas, podas. É quase metade do lixo de casa no Brasil.</li><li><b>Reciclável seco:</b> papel, plástico, vidro, metal, embalagens cartonadas.</li><li><b>Rejeito:</b> papel higiênico, fraldas, guardanapo engordurado.</li><li><b>Perigoso ou especial:</b> pilhas, lâmpadas, eletrônicos, óleo usado. Esses voltam ao fabricante pela logística reversa.</li></ul>'},
+      {h:'A estrela do projeto: Tetra Pak', b:'<p>A caixinha longa vida é um sanduíche de camadas coladas:</p><div class="layers"><span style="width:75%;background:var(--bin-azul)">papel 75%</span><span style="width:20%;background:var(--bin-vermelho)">PE 20%</span><span style="width:5%;background:var(--bin-cinza)">Al</span></div><p>Separar essas camadas é difícil. Por isso o projeto estuda como aproveitar a energia dela num <b>leito fluidizado</b>.</p>'}
+    ],
+    build: () => shuffle(F1).map(([k,e,n,a,w]) => ({key:'f1-'+k, item:{e,n}, prompt:'Em qual grupo este resíduo se encaixa?', style:'cat', options:CATS, answer:a, why:w}))
+  },
+  { id:2, title:'Destinação correta', tag:'Cada resíduo na lixeira certa', pc:'var(--bin-azul)',
+    tip:'Lixo separado certinho vale mais: vira matéria-prima, adubo ou combustível. Misturado, vira problema.',
+    learn:[
+      {h:'As cores da coleta seletiva', b:'<p>A Resolução CONAMA nº 275/2001 definiu uma cor para cada tipo de resíduo:</p>' + binPal(), wide:true},
+      {h:'A ordem de prioridade', b:'<p>A PNRS manda seguir esta ordem. Repare que a <b>energia vem depois da reciclagem</b>:</p><div class="hier"><div>1. Não gerar</div><div>2. Reduzir</div><div>3. Reutilizar</div><div>4. Reciclar</div><div>5. Tratar e recuperar energia</div><div>6. Dispor rejeitos no aterro sanitário</div></div>'},
+      {h:'Lixão ≠ aterro sanitário', b:'<p>O <b>lixão</b> é proibido: o lixo fica a céu aberto e contamina solo, água e ar. Mesmo assim, ainda existe em mais de 2 mil cidades brasileiras.</p><p>O <b>aterro sanitário</b> tem manta impermeável, drenagem do chorume e captação de gases. Resíduos mal geridos respondem por cerca de <b>10% das emissões de metano</b> do mundo.</p>'}
+    ],
+    build: () => shuffle(F2).map(([k,e,n,a,w]) => ({key:'f2-'+k, item:{e,n}, prompt:'Em qual lixeira ele vai?', style:'bin', options:BINS, answer:a, why:w}))
+  },
+  { id:3, title:'Potencial energético', tag:'Quem guarda mais energia?', pc:'var(--sun-deep)',
+    tip:'Todo combustível é energia química guardada. A pergunta é: quanto cabe em 1 kg?',
+    learn:[
+      {h:'Poder calorífico', b:'<p>É a energia liberada quando <b>1 kg</b> de material queima por completo. Medimos em <b>MJ/kg</b> (megajoule por quilo).</p><p class="bigfact">1 MJ ≈ 0,28 kWh</p><p>Isso dá para deixar uma lâmpada LED de 9 W acesa por cerca de 30 horas.</p>'},
+      {h:'A água atrapalha', b:'<p>Para queimar, a água do material precisa evaporar primeiro, e isso gasta 2,26 MJ por kg de água. Restos de comida têm uns <b>70% de água</b>.</p><p>Por isso orgânicos úmidos rendem mais na <b>biodigestão</b>, onde bactérias trabalham com a água.</p>'},
+      {h:'Valores de referência', b:'<div class="tbl-wrap"><table><thead><tr><th>Material</th><th>MJ/kg (aprox.)</th></tr></thead><tbody>' + ['pe','ps','oleo','pneu','pet','tetra','madeira','papel','bagaco','comida'].map(k => `<tr><td>${MATS[k].e} ${MATS[k].n}</td><td class="mono">${fmt(MATS[k].v)}</td></tr>`).join('') + '<tr><td>⛽ Gasolina (comparação)</td><td class="mono">44</td></tr></tbody></table></div><p class="note">Valores médios aproximados (poder calorífico inferior). Variam com a umidade e a composição.</p>', wide:true}
+    ],
+    build: () => shuffle(F3).map(([a,b,w]) => { const opts = shuffle([a,b]).map(id => ({id, label:MATS[id].n, e:MATS[id].e, v:MATS[id].v})); return {key:'f3-'+a+'-'+b, item:null, prompt:'Qual libera mais energia ao queimar 1 kg?', style:'duel', options:opts, answer: MATS[a].v > MATS[b].v ? a : b, why:w}; }),
+    extra:[{id:'calc', label:'Calculadora da escola'}]
+  },
+  { id:4, title:'Rotas de conversão', tag:'Biodigestão, pirólise, gaseificação…', pc:'var(--flame)',
+    tip:'Cada resíduo tem uma rota preferida. A dica é olhar para a umidade, a composição e o produto que queremos.',
+    learn:[
+      {h:'O segredo é o oxigênio', b:'<div class="tbl-wrap"><table><thead><tr><th>Processo</th><th>Oxigênio</th><th>Temperatura</th><th>Produto principal</th></tr></thead><tbody>' +
+        '<tr><td><b>Biodigestão anaeróbia</b></td><td>nenhum</td><td>35–55 °C</td><td>biogás + biofertilizante</td></tr>' +
+        '<tr><td><b>Compostagem</b></td><td>muito (ar)</td><td>até ~65 °C</td><td>adubo (húmus)</td></tr>' +
+        '<tr><td><b>Pirólise</b></td><td>nenhum</td><td>300–700 °C</td><td>óleo, gás e carvão</td></tr>' +
+        '<tr><td><b>Gaseificação</b></td><td>pouco</td><td>700–1000 °C</td><td>gás de síntese (CO + H₂)</td></tr>' +
+        '<tr><td><b>Incineração</b></td><td>em excesso</td><td>850–1100 °C</td><td>calor → vapor → eletricidade</td></tr>' +
+        '<tr><td><b>Transesterificação</b></td><td>não se aplica</td><td>~60 °C</td><td>biodiesel + glicerina</td></tr>' +
+        '<tr><td><b>Coprocessamento</b></td><td>em excesso</td><td>~1450 °C</td><td>energia para fazer cimento</td></tr>' +
+        '</tbody></table></div>', wide:true},
+      {h:'O que é leito fluidizado?', b:'<p>Imagine uma caixa de areia com ar soprando de baixo. Com pouco ar, nada acontece. Com ar suficiente, a areia começa a <b>se comportar como um líquido fervendo</b>.</p><p>Os resíduos misturados nessa areia quente esquentam por igual e reagem bem. É o reator estudado no projeto. Você vai pilotar um na fase 6!</p>'},
+      {h:'Rotas biológicas × térmicas', b:'<ul><li><b>Biológicas</b> (bactérias, enzimas): servem para resíduos úmidos e orgânicos e são mais lentas.</li><li><b>Térmicas</b> (calor): servem para resíduos secos como plásticos, papel e madeira, e são rápidas.</li><li><b>Químicas</b> (reações): óleo vira biodiesel.</li></ul>'}
+    ],
+    build: () => shuffle(F4).map(([k,e,n,a,opts,w]) => ({key:'f4-'+k, item:{e,n}, prompt:'Qual é a melhor rota para este resíduo?', style:'list', options:shuffle(opts).map(id => ({id, label:TECH[id].n, sub:TECH[id].s})), answer:a, why:w}))
+  },
+  { id:5, title:'Combustíveis e produtos', tag:'Biogás, syngas, bio-óleo, biodiesel', pc:'var(--violet)',
+    tip:'Do outro lado de cada rota sai um produto energético. Vamos descobrir o que dá para fazer com cada um.',
+    learn:[
+      {h:'Cardápio de produtos', b:'<div class="tbl-wrap"><table><thead><tr><th>Produto</th><th>De onde vem</th><th>Para que serve</th></tr></thead><tbody>' +
+        '<tr><td><b>Biogás</b></td><td>biodigestão, aterros</td><td>fogão, gerador elétrico</td></tr>' +
+        '<tr><td><b>Biometano</b></td><td>biogás purificado (≥ 90% CH₄)</td><td>substitui gás natural e GNV</td></tr>' +
+        '<tr><td><b>Gás de síntese</b></td><td>gaseificação</td><td>eletricidade, hidrogênio, metanol</td></tr>' +
+        '<tr><td><b>Óleo pirolítico + char</b></td><td>pirólise</td><td>combustível líquido, carvão</td></tr>' +
+        '<tr><td><b>Biodiesel</b></td><td>óleo usado + álcool</td><td>motores a diesel</td></tr>' +
+        '<tr><td><b>Etanol 2G</b></td><td>palha e bagaço</td><td>carros flex</td></tr>' +
+        '<tr><td><b>CDR</b></td><td>rejeito seco e triturado</td><td>fornos de cimento</td></tr>' +
+        '<tr><td><b>Vapor e eletricidade</b></td><td>incineração, caldeiras</td><td>indústria e rede elétrica</td></tr>' +
+        '</tbody></table></div>', wide:true},
+      {h:'Quanto vale 1 m³ de biogás?', b:'<p class="bigfact">≈ 6 kWh</p><p>de energia térmica, ou perto de 0,5 kg de gás de cozinha. Num motor-gerador, vira uns 2 kWh de eletricidade, o suficiente para carregar mais de 100 celulares.</p>'},
+      {h:'Por que não queimar tudo?', b:'<p>Produtos líquidos e gasosos podem ser <b>guardados e transportados</b> e usados quando precisar. Queimar direto só gera calor na hora. Transformar o resíduo em combustível dá mais flexibilidade.</p>'}
+    ],
+    build: () => shuffle(F5).map(([k,e,q,opts,w]) => ({key:'f5-'+k, item:{e, n:''}, prompt:q, style:'list', options:shuffle(opts.map((t,i) => ({id:'o'+i, label:t}))), answer:'o0', why:w}))
+  },
+  { id:6, title:'Leito fluidizado e CFD', tag:'Pilote um reator e um túnel de vento virtual', pc:'var(--sky)',
+    tip:'Fluidodinâmica computacional (CFD) é usar o computador para ver o invisível: o caminho do ar dentro do reator.',
+    learn:[
+      {h:'Os regimes da fluidização', b:'<ul><li><b>Leito fixo</b> (u &lt; u<sub>mf</sub>): o ar passa entre as partículas sem movê-las.</li><li><b>Mínima fluidização</b> (u = u<sub>mf</sub>): o empurrão do ar se iguala ao peso das partículas.</li><li><b>Borbulhante</b>: surgem bolhas de ar e o leito parece água fervendo.</li><li><b>Arraste</b> (u &gt; u<sub>t</sub>): as partículas são levadas para fora e um ciclone as recupera.</li></ul>'},
+      {h:'O que é CFD?', b:'<p><b>Computational Fluid Dynamics</b>: o computador divide o espaço em milhares de células (a <b>malha</b>) e, em cada uma, resolve as leis de conservação de <b>massa</b>, <b>quantidade de movimento</b> (equações de Navier-Stokes) e <b>energia</b>.</p><p>O resultado são mapas coloridos de velocidade, pressão e temperatura.</p>'},
+      {h:'Etapas de uma simulação', b:'<ol class="steps" style="grid-template-columns:repeat(3,minmax(0,1fr))"><li><b>Geometria:</b> desenhar o reator</li><li><b>Malha:</b> dividir em células</li><li><b>Física:</b> escolher os modelos</li><li><b>Contorno:</b> entrada, saída, paredes</li><li><b>Solução:</b> o computador itera</li><li><b>Pós:</b> gerar cores e gráficos</li></ol>', wide:true},
+      {h:'Ferramentas livres', b:'<ul><li><b>MFiX</b> (NETL, EUA): feito para leitos fluidizados.</li><li><b>OpenFOAM</b>: CFD de uso geral, muito usado em pesquisa.</li><li><b>ParaView</b>: para visualizar os resultados.</li></ul><p>No projeto, os ensaios no leito (vazão de ar, granulometria, proporção de materiais) são comparados com a simulação.</p>'}
+    ],
+    build: () => shuffle(F6).map(([k,e,q,opts,w]) => ({key:'f6-'+k, item:{e, n:''}, prompt:q, style:'list', options:shuffle(opts.map((t,i) => ({id:'o'+i, label:t}))), answer:'o0', why:w})),
+    extra:[{id:'leito', label:'Simulador de leito'}, {id:'cfd', label:'Túnel de vento CFD'}]
+  }
+];
+
+const ITEM_LABEL = {};
+F1.forEach(r => ITEM_LABEL['f1-'+r[0]] = r[1] + ' ' + r[2] + ' (grupo)');
+F2.forEach(r => ITEM_LABEL['f2-'+r[0]] = r[1] + ' ' + r[2] + ' (lixeira)');
+F3.forEach(r => ITEM_LABEL['f3-'+r[0]+'-'+r[1]] = MATS[r[0]].n + ' × ' + MATS[r[1]].n);
+F4.forEach(r => ITEM_LABEL['f4-'+r[0]] = r[1] + ' ' + r[2] + ' (rota)');
+F5.forEach(r => ITEM_LABEL['f5-'+r[0]] = r[1] + ' ' + r[2]);
+F6.forEach(r => ITEM_LABEL['f6-'+r[0]] = r[1] + ' ' + r[2]);
+
+/* ---------- progresso ---------- */
+const LEVELS = [[0,'Aprendiz da Reciclagem'],[120,'Separador(a) Expert'],[300,'Caçador(a) de Energia'],[500,'Engenheiro(a) de Conversão'],[700,'Mestre do Leito Fluidizado'],[880,'Cientista Do Lixo à Luz']];
+const MISSIONS = [['fixo','Mantenha o leito fixo, com ar passando'],['borb','Faça o leito borbulhar'],['arraste','Arraste as partículas para o ciclone']];
+const BADGES = [
+  {e:'🔍', n:'Detetive do Lixo', t:u => done(u,1)},
+  {e:'🗂️', n:'Separação Nota 10', t:u => done(u,2)},
+  {e:'🔥', n:'Medidor de Energia', t:u => done(u,3)},
+  {e:'⚙️', n:'Engenharia de Rotas', t:u => done(u,4)},
+  {e:'⛽', n:'Química dos Combustíveis', t:u => done(u,5)},
+  {e:'🌀', n:'Ciência do Fluxo', t:u => done(u,6)},
+  {e:'🧪', n:'Exploração do Leito', t:u => MISSIONS.every(m => u.missions && u.missions[m[0]])},
+  {e:'💯', n:'Gabarito', t:u => Object.values(u.phases || {}).some(p => p.best === 1)},
+  {e:'🏆', n:'Do Lixo à Luz', t:u => PHASES.every(p => done(u, p.id))}
+];
+function cur(){ return store.users[store.currentId] || null; }
+function done(u, id){ return !!(u && u.phases && u.phases[id] && u.phases[id].stars); }
+function unlocked(u, id){ return store.unlockAll || id === 1 || done(u, id - 1); }
+function xpOf(u){ if(!u) return 0; let x = 0; Object.values(u.phases || {}).forEach(p => x += p.xp || 0); x += Object.values(u.missions || {}).filter(Boolean).length * 15; return x; }
+function levelOf(xp){ let i = 0; LEVELS.forEach((l, k) => { if(xp >= l[0]) i = k; }); const next = LEVELS[i + 1]; return {i, name:LEVELS[i][1], base:LEVELS[i][0], next: next ? next[0] : null}; }
+function badgesOf(u){ return BADGES.map(b => ({...b, on: !!(u && b.t(u))})); }
+function starsHTML(n){ let s = ''; for(let i = 0; i < 3; i++) s += i < n ? '★' : '<span class="off">★</span>'; return '<span class="stars" aria-label="' + n + ' de 3 estrelas">' + s + '</span>'; }
+
+/* ---------- estado de navegação ---------- */
+const state = { screen: store.currentId && store.users[store.currentId] ? 'hub' : 'login', phase:1, tab:'aprender', avatar:AVATARS[0], teacherOk:false, confirm:null };
+let run = null;
+
+/* ---------- renderização ---------- */
+function render(){
+  stopSims();
+  const app = $('#app');
+  const s = state.screen;
+  let html = '';
+  if(s === 'login') html = viewLogin();
+  else if(s === 'pin') html = viewTop() + viewPin();
+  else if(s === 'teacher') html = viewTop() + viewTeacher();
+  else if(s === 'about') html = viewTop() + viewAbout();
+  else if(!cur()){ state.screen = 'login'; html = viewLogin(); }
+  else if(s === 'hub') html = viewTop() + viewHub();
+  else if(s === 'phase') html = viewTop() + viewPhase();
+  else if(s === 'cert') html = viewTop() + viewCert();
+  app.innerHTML = html;
+  afterRender();
+}
+
+function viewTop(){
+  const u = cur();
+  const nav = (id, label) => `<button data-act="go" data-arg="${id}" ${state.screen === id ? 'aria-current="page"' : ''}>${label}</button>`;
+  return `<header class="top"><div class="wrap">
+    <button class="logo" data-act="go" data-arg="${u ? 'hub' : 'login'}" aria-label="Ir para o mapa">${LOGO}<span>Do Lixo à Luz</span></button>
+    <nav class="nav" aria-label="Principal">
+      ${u ? nav('hub','Mapa') : nav('login','Entrar')}
+      ${nav('about','Sobre o projeto')}
+      ${nav('teacher','Professor(a)')}
+      <button data-act="sound" aria-pressed="${store.sound}" title="Som">${store.sound ? '🔊' : '🔈'}</button>
+      ${u ? `<span class="chip"><span class="ava">${u.avatar}</span><span class="mono">${xpOf(u)} XP</span></span><button data-act="logout">Sair</button>` : ''}
+    </nav></div></header>`;
+}
+
+function viewLogin(){
+  const users = Object.values(store.users).sort((a, b) => (b.last || 0) - (a.last || 0)).slice(0, 8);
+  return `<main class="login wrap"><div class="login-grid">
+    <section>
+      <p class="eyebrow">PIC-Jr 2026 · resíduos sólidos + energia + CFD</p>
+      <h1 class="hero-title">Do lixo<em>à luz</em></h1>
+      <p class="lead">Descubra como o lixo da sua escola pode virar <b>biogás</b>, <b>gás de síntese</b> e <b>eletricidade</b>, e pilote um reator de leito fluidizado virtual.</p>
+      <div class="bins-strip" aria-hidden="true">${BINS_ALL.map((b, i) => `<i style="background:${b.c};animation-delay:${i * .15}s"></i>`).join('')}</div>
+    </section>
+    <section class="card" style="padding:24px">
+      <div class="watt" style="margin-bottom:16px">${WATT}<p class="bubble">Oi! Eu sou o Watt. Diga seu nome e escolha seu avatar de cientista ou astronauta para começar a jornada.</p></div>
+      <form id="loginForm" autocomplete="off" novalidate>
+        <div class="field"><label class="lbl" for="lgName">Seu nome</label><input type="text" id="lgName" maxlength="40" placeholder="Ex.: Ana Souza" required></div>
+        <div class="field"><label class="lbl" for="lgTurma">Turma</label><input type="text" id="lgTurma" maxlength="24" placeholder="Ex.: 1º ano A" required></div>
+        <div class="field"><span class="lbl" id="avaLbl">Avatar</span><div class="ava-pick" role="group" aria-labelledby="avaLbl">${AVATARS.map((a, i) => `<button type="button" data-act="pick-ava" data-arg="${a}" aria-pressed="${a === state.avatar}" title="${AVATAR_NAMES[i]}" aria-label="${AVATAR_NAMES[i]} ${i + 1}">${a}</button>`).join('')}</div></div>
+        <p class="err" id="lgErr"></p>
+        <button class="btn" type="submit" style="width:100%">Começar a jornada</button>
+      </form>
+      ${users.length ? `<p class="eyebrow" style="margin-top:20px">Já jogou neste computador?</p><div class="quick">${users.map(u => `<button data-act="quick" data-arg="${esc(u.id)}"><span class="ava">${u.avatar}</span>${esc(u.name)} <small class="muted">${esc(u.turma)}</small></button>`).join('')}</div>` : ''}
+      <p style="margin-top:18px;font-size:.92rem" class="muted">Professor(a)? <button class="linkbtn" data-act="go" data-arg="teacher">Abrir o painel de gestão</button> · <button class="linkbtn" data-act="go" data-arg="about">Sobre o projeto</button></p>
+    </section>
+  </div></main>`;
+}
+
+function viewHub(){
+  const u = cur(); const xp = xpOf(u); const lv = levelOf(xp);
+  const pct = lv.next ? (xp - lv.base) / (lv.next - lv.base) * 100 : 100;
+  const nextPhase = PHASES.find(p => !done(u, p.id));
+  const rank = Object.values(store.users).map(x => ({x, xp:xpOf(x)})).sort((a, b) => b.xp - a.xp).slice(0, 6);
+  const allDone = !nextPhase;
+  return `<main class="hub wrap">
+    <section class="card hello">
+      <span class="ava big">${u.avatar}</span>
+      <div style="min-width:0">
+        <p class="eyebrow">${esc(u.turma)} · Nível ${lv.i + 1}</p>
+        <h1 style="font-size:clamp(1.6rem,4vw,2.2rem)">Olá, ${esc(u.name.split(' ')[0])}!</h1>
+        <p style="font-weight:800">${lv.name} <span class="muted mono">· ${xp} XP${lv.next ? ' / ' + lv.next : ''}</span></p>
+        <div class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${pct}%"></i></div>
+      </div>
+      ${allDone ? `<button class="btn sun" data-act="go" data-arg="cert">Ver certificado</button>` : `<button class="btn" data-act="open" data-arg="${nextPhase.id}">${xp ? 'Continuar' : 'Começar'}: fase ${nextPhase.id}</button>`}
+    </section>
+    <div class="hub-grid">
+      <section aria-label="Trilha de fases">
+        <div class="watt" style="margin-bottom:18px">${WATT}<p class="bubble">${allDone ? 'Você completou a trilha inteira! Que tal apresentar o simulador de leito fluidizado na feira de ciências?' : esc(nextPhase.tip)}</p></div>
+        <div class="trail">${PHASES.map(p => {
+          const lock = !unlocked(u, p.id); const pr = u.phases[p.id];
+          return `<div class="stop ${lock ? 'locked' : ''}" style="--pc:${p.pc}">
+            <div class="num">${lock ? '🔒' : p.id}</div>
+            <div class="card"><div style="min-width:0"><h3>${p.title}</h3><p class="muted" style="font-weight:700">${p.tag}</p>${pr ? `<p style="margin-top:4px">${starsHTML(pr.stars)} <span class="muted mono" style="font-size:.85rem">${Math.round(pr.best * 100)}% · ${pr.xp} XP</span></p>` : ''}</div>
+            ${lock ? `<span class="muted" style="font-weight:800;font-size:.85rem">Conclua a fase ${p.id - 1}</span>` : `<button class="btn ${pr ? 'ghost' : ''} small" data-act="open" data-arg="${p.id}">${pr ? 'Rever' : 'Jogar'}</button>`}</div>
+          </div>`; }).join('')}</div>
+      </section>
+      <aside class="side">
+        <section class="card"><h3 style="font-size:1.25rem;margin-bottom:10px">Conquistas</h3><div class="badges">${badgesOf(u).map(b => `<div class="badge ${b.on ? '' : 'off'}" title="${b.n}"><b>${b.e}</b>${b.n}</div>`).join('')}</div></section>
+        <section class="card"><h3 style="font-size:1.25rem">Ranking deste computador</h3><ol class="rank">${rank.map((r, i) => `<li class="${r.x.id === u.id ? 'me' : ''}"><span class="mono muted">${i + 1}</span><span class="ava">${r.x.avatar}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800">${esc(r.x.name)}</span><span class="mono">${r.xp}</span></li>`).join('')}</ol></section>
+      </aside>
+    </div>
+  </main>`;
+}
+
+function viewPhase(){
+  const p = PHASES[state.phase - 1]; const u = cur();
+  const tabs = [{id:'aprender', label:'Aprender'}, {id:'jogar', label:'Desafio'}].concat(p.extra || []);
+  let body = '';
+  if(state.tab === 'aprender') body = viewLearn(p);
+  else if(state.tab === 'jogar') body = viewQuiz(p);
+  else if(state.tab === 'calc') body = viewCalc();
+  else if(state.tab === 'leito') body = viewLeito();
+  else if(state.tab === 'cfd') body = viewCFD();
+  const pr = u.phases[p.id];
+  return `<main class="phase wrap" style="--pc:${p.pc}">
+    <div class="phase-head"><button class="btn ghost small" data-act="go" data-arg="hub" aria-label="Voltar ao mapa">← Mapa</button><span class="num">${p.id}</span><div style="min-width:0"><p class="eyebrow">Fase ${p.id} de 6</p><h1>${p.title}</h1></div>${pr ? `<span style="margin-left:auto">${starsHTML(pr.stars)}</span>` : ''}</div>
+    <div class="tabs" role="tablist">${tabs.map(t => `<button role="tab" aria-selected="${state.tab === t.id}" data-act="tab" data-arg="${t.id}">${t.label}</button>`).join('')}</div>
+    ${body}
+  </main>`;
+}
+
+function viewLearn(p){
+  const nextTab = p.id === 6 ? 'leito' : 'jogar';
+  return `<div class="watt">${WATT}<p class="bubble">${esc(p.tip)}</p></div>
+  <div class="learn">${p.learn.map(c => `<article class="card ${c.wide ? 'wide' : ''}"><h3>${c.h}</h3>${c.b}</article>`).join('')}</div>
+  <div class="learn-cta">${p.id === 3 ? '<button class="btn ghost" data-act="tab" data-arg="calc">Abrir a calculadora</button>' : ''}<button class="btn" data-act="tab" data-arg="${nextTab}">${p.id === 6 ? 'Ir para o simulador' : 'Começar o desafio'} →</button></div>`;
+}
+
+/* ---------- quiz ---------- */
+function startRun(pid){ run = {pid, qs:PHASES[pid - 1].build(), i:0, correct:0, picked:null, result:null}; }
+
+function viewQuiz(p){
+  if(!run || run.pid !== p.id) startRun(p.id);
+  if(run.result) return viewResult(p);
+  const q = run.qs[run.i]; const n = run.qs.length; const ans = run.picked;
+  const cls = o => ans == null ? '' : o.id === q.answer ? 'ok' : o.id === ans ? 'no' : 'dim';
+  let opts = '';
+  if(q.style === 'cat') opts = q.options.map(o => `<button class="opt opt-cat ${cls(o)}" style="--c:${o.c}" data-act="answer" data-arg="${o.id}" ${ans != null ? 'disabled' : ''}><span class="ic">${o.e}</span><span>${o.label}<br><small>${o.sub}</small></span></button>`).join('');
+  else if(q.style === 'bin') opts = q.options.map(o => `<button class="opt opt-bin ${o.dark ? 'dark-text' : ''} ${cls(o)}" style="--c:${o.c}" data-act="answer" data-arg="${o.id}" ${ans != null ? 'disabled' : ''} aria-label="Lixeira ${o.label}: ${o.sub}"><span class="ic">${o.e}</span><span>${o.label}</span><small style="color:inherit;opacity:.9">${o.sub}</small></button>`).join('');
+  else if(q.style === 'duel'){
+    const max = 43;
+    const card = o => `<button class="opt opt-duel ${cls(o)}" data-act="answer" data-arg="${o.id}" ${ans != null ? 'disabled' : ''}><span class="ic">${o.e}</span><span>${o.label}</span>${ans != null ? `<span class="val">${fmt(o.v)} MJ/kg</span><span class="meter"><i style="width:${o.v / max * 100}%"></i></span>` : '<small>toque para escolher</small>'}</button>`;
+    opts = card(q.options[0]) + '<span class="vs">VS</span>' + card(q.options[1]);
+  }
+  else opts = q.options.map(o => `<button class="opt ${cls(o)}" data-act="answer" data-arg="${o.id}" ${ans != null ? 'disabled' : ''}><span>${o.label}</span>${o.sub ? `<small>${o.sub}</small>` : ''}</button>`).join('');
+  const right = q.options.find(o => o.id === q.answer);
+  const ok = ans === q.answer;
+  return `<section class="quiz">
+    <div class="qhead"><span class="mono">${run.i + 1}/${n}</span><div class="prog"><i style="width:${(run.i + (ans != null ? 1 : 0)) / n * 100}%"></i></div><span class="mono">✔ ${run.correct}</span></div>
+    <div class="card qcard">${q.item ? `<div class="qitem" aria-hidden="true">${q.item.e}</div>${q.item.n ? `<div class="qname">${q.item.n}</div>` : ''}` : '<div class="qitem" aria-hidden="true">🔥</div>'}<p class="prompt" style="${q.item && !q.item.n ? 'font-size:1.3rem;color:var(--ink)' : ''}">${q.prompt}</p></div>
+    <div class="opts opts-${q.style}">${opts}</div>
+    ${ans != null ? `<div class="fb ${ok ? 'ok' : 'no'}" role="status"><h3>${ok ? 'Isso aí! +10 pontos' : 'Quase! Resposta certa: ' + (right.label + (q.style === 'bin' ? ' (' + right.sub + ')' : ''))}</h3><p>${q.why}</p><div class="row"><button class="btn" data-act="next" id="nextBtn">${run.i + 1 < n ? 'Próxima →' : 'Ver resultado'}</button></div></div>` : ''}
+  </section>`;
+}
+
+function answer(id){
+  if(!run || run.picked != null) return;
+  const q = run.qs[run.i]; const u = cur();
+  run.picked = id;
+  const ok = id === q.answer;
+  u.seen = u.seen || {}; u.errors = u.errors || {};
+  u.seen[q.key] = (u.seen[q.key] || 0) + 1;
+  if(ok) run.correct++; else u.errors[q.key] = (u.errors[q.key] || 0) + 1;
+  save(); beep(ok ? 'ok' : 'bad');
+  render();
+  const nb = $('#nextBtn'); if(nb) nb.focus({preventScroll:true});
+  const fb = $('.fb'); if(fb && fb.scrollIntoView) fb.scrollIntoView({block:'nearest', behavior: reduceMotion ? 'auto' : 'smooth'});
+}
+
+function nextQ(){
+  if(!run) return;
+  if(run.i + 1 < run.qs.length){ run.i++; run.picked = null; render(); window.scrollTo({top:0}); return; }
+  const u = cur(); const n = run.qs.length; const ratio = run.correct / n;
+  const stars = ratio >= .9 ? 3 : ratio >= .6 ? 2 : 1;
+  const xp = run.correct * 10 + 30 + (stars === 3 ? 20 : 0);
+  const before = xpOf(u); const lvBefore = levelOf(before).i;
+  const bBefore = badgesOf(u).filter(b => b.on).map(b => b.n);
+  const prev = u.phases[run.pid] || {xp:0, stars:0, best:0, attempts:0};
+  u.phases[run.pid] = {xp:Math.max(prev.xp, xp), stars:Math.max(prev.stars, stars), best:Math.max(prev.best || 0, ratio), attempts:(prev.attempts || 0) + 1, last:ratio, at:Date.now()};
+  u.last = Date.now(); save();
+  const after = xpOf(u);
+  run.result = {ratio, stars, gained:after - before, levelUp: levelOf(after).i > lvBefore, newBadges: badgesOf(u).filter(b => b.on && !bBefore.includes(b.n))};
+  beep('win'); if(stars >= 2) confetti();
+  render(); window.scrollTo({top:0});
+}
+
+function viewResult(p){
+  const r = run.result; const u = cur();
+  const msg = r.stars === 3 ? 'Mandou muito bem!' : r.stars === 2 ? 'Muito bom!' : 'Fase concluída!';
+  const nextP = PHASES[p.id];
+  return `<section class="card result">
+    ${WATT}
+    <div class="stars">${'★'.repeat(r.stars)}<span class="off">${'★'.repeat(3 - r.stars)}</span></div>
+    <h2>${msg}</h2>
+    <p style="font-size:1.1rem">Você acertou <b>${run.correct} de ${run.qs.length}</b> (${Math.round(r.ratio * 100)}%).</p>
+    <p class="mono" style="font-size:1.2rem">${r.gained > 0 ? '+' + r.gained + ' XP' : 'Sem XP novo: supere seu recorde para ganhar mais'}</p>
+    ${r.levelUp ? `<p class="newbadge"><b>⬆️</b>Subiu de nível: ${levelOf(xpOf(u)).name}</p>` : ''}
+    ${r.newBadges.map(b => `<p class="newbadge"><b>${b.e}</b>Nova conquista: ${b.n}</p>`).join('')}
+    <div class="row-btns">
+      <button class="btn ghost" data-act="restart">Jogar de novo</button>
+      ${nextP ? `<button class="btn" data-act="open" data-arg="${nextP.id}">Próxima fase: ${nextP.title} →</button>` : `<button class="btn sun" data-act="go" data-arg="cert">Ver certificado</button>`}
+    </div>
+  </section>`;
+}
+
+/* ---------- calculadora ---------- */
+const CALC = {org:40, pla:6, tet:3, ole:12};
+function viewCalc(){
+  const sl = (id, label, min, max, step, unit) => `<div class="slider"><div class="top-row"><label for="c_${id}">${label}</label><span class="mono" id="v_${id}">${fmt(CALC[id])} ${unit}</span></div><input type="range" id="c_${id}" min="${min}" max="${max}" step="${step}" value="${CALC[id]}" data-calc="${id}" data-unit="${unit}"></div>`;
+  return `<div class="watt">${WATT}<p class="bubble">Estime o que <b>a sua escola</b> joga fora e veja quanta energia daria para recuperar em um mês (22 dias letivos).</p></div>
+  <div class="calc">
+    <section class="card"><h3 style="margin-bottom:14px">Resíduos da escola</h3>
+      ${sl('org','🍲 Restos orgânicos da cantina', 0, 200, 1, 'kg/dia')}
+      ${sl('pla','🛍️ Plástico não reciclável', 0, 50, .5, 'kg/dia')}
+      ${sl('tet','🧃 Tetra Pak que não foi reciclada', 0, 30, .5, 'kg/dia')}
+      ${sl('ole','🛢️ Óleo de cozinha usado', 0, 100, 1, 'L/mês')}
+      <p class="note">Fatores médios usados: 0,1 m³ de biogás por kg de orgânico; biogás com 6 kWh/m³; pirólise com ~0,75 L de óleo por kg de plástico; 20 MJ/kg na Tetra Pak; 0,9 L de biodiesel por L de óleo; eficiência elétrica de 25 a 30%. São estimativas para fins didáticos.</p>
+    </section>
+    <section class="card" id="calcOut"></section>
+  </div>`;
+}
+function calcUpdate(){
+  const D = 22;
+  const orgM = CALC.org * D, plaM = CALC.pla * D, tetM = CALC.tet * D;
+  const biogas = orgM * 0.1;
+  const botij = biogas * 21.5 / (13 * 46);
+  const eOrg = biogas * 6 * 0.30;
+  const oleoPir = plaM * 0.75;
+  const ePla = plaM * 35 / 3.6 * 0.25;
+  const syn = tetM * 20 * 0.7 / 3.6;
+  const eTet = tetM * 20 / 3.6 * 0.25;
+  const biod = CALC.ole * 0.9;
+  const eOle = biod * 33 / 3.6 * 0.30;
+  const tot = eOrg + ePla + eTet + eOle;
+  const parts = [['Biogás', eOrg, 'var(--bin-marrom)'], ['Pirólise', ePla, 'var(--bin-vermelho)'], ['Gaseificação', eTet, 'var(--sky)'], ['Biodiesel', eOle, 'var(--sun-deep)']];
+  const mx = Math.max(1, ...parts.map(p => p[1]));
+  $('#calcOut').innerHTML = `<h3 style="margin-bottom:12px">Em um mês, daria para obter…</h3>
+    <div class="outs">
+      <div class="out"><div class="v">${fmt(biogas, 0)} m³</div><div class="u">de biogás, o mesmo que ${fmt(botij, 1)} botijões de 13 kg</div></div>
+      <div class="out"><div class="v">${fmt(oleoPir, 0)} L</div><div class="u">de óleo pirolítico</div></div>
+      <div class="out"><div class="v">${fmt(syn, 0)} kWh</div><div class="u">de energia no gás de síntese</div></div>
+      <div class="out"><div class="v">${fmt(biod, 1)} L</div><div class="u">de biodiesel</div></div>
+    </div>
+    <p class="eyebrow" style="margin-top:16px">Eletricidade possível: <span class="mono" style="color:var(--ink);font-size:1rem">${fmt(tot, 0)} kWh/mês</span></p>
+    <div class="bars">${parts.map(p => `<div><span>${p[0]}</span><span class="b"><i style="width:${p[1] / mx * 100}%;background:${p[2]}"></i></span><span class="mono" style="text-align:right">${fmt(p[1], 0)} kWh</span></div>`).join('')}</div>
+    <div class="eq"><div><b>${fmt(tot / 0.015, 0)}</b>cargas de celular</div><div><b>${fmt(tot / 0.73, 0)}</b>banhos de 8 min</div><div><b>${fmt(tot / 1.3, 0)}</b>dias de geladeira</div></div>`;
+}
+
+/* ---------- simulador de leito fluidizado ---------- */
+const BEDMAT = {
+  tetra:{n:'Tetra Pak picada', rho:1000, c:'#8EC3FF'},
+  areia:{n:'Areia', rho:2650, c:'#E9C27A'},
+  pe:{n:'Plástico PE picado', rho:950, c:'#FF9DBB'},
+  serragem:{n:'Serragem', rho:500, c:'#D29A5C'}
+};
+const SIM = {mat:'tetra', d:2, s:0, raf:0, cfdRaf:0, paused:false};
+const pauseBtn = () => `<button class="btn ghost small" data-act="pause" aria-pressed="${SIM.paused}">${SIM.paused ? '▶ Continuar animação' : '⏸ Pausar animação'}</button>`;
+function sliderToU(s){ return 12 * Math.pow(s / 1000, 2); }
+function fluidCalc(dmm, rho){
+  const g = 9.81, rg = 1.2, mu = 1.8e-5, d = dmm / 1000;
+  const Ar = Math.pow(d, 3) * rg * (rho - rg) * g / (mu * mu);
+  const Remf = Math.sqrt(33.7 * 33.7 + 0.0408 * Ar) - 33.7;
+  const umf = Remf * mu / (rg * d);
+  let ut = 1;
+  for(let i = 0; i < 100; i++){ const Re = Math.max(rg * ut * d / mu, 1e-6); const Cd = Re < 1000 ? 24 / Re * (1 + 0.15 * Math.pow(Re, 0.687)) : 0.44; const un = Math.sqrt(4 * g * d * (rho - rg) / (3 * Cd * rg)); ut = 0.5 * (ut + un); }
+  const dPb = (1 - 0.45) * (rho - rg) * g * 0.3;
+  return {umf, ut, dPb, Ar};
+}
+function regimeOf(u, f){ return u < f.umf ? 'fixo' : u < f.ut ? 'borb' : 'arraste'; }
+const REG = {fixo:{n:'Leito fixo', c:'#6B7C85'}, borb:{n:'Fluidização borbulhante', c:'#1C9646'}, arraste:{n:'Arraste (transporte pneumático)', c:'#EE5330'}};
+
+function viewLeito(){
+  const u = cur(); const m = u.missions || {};
+  return `<div class="watt">${WATT}<p class="bubble">Aumente o ar devagar e acompanhe o leito: primeiro fixo, depois borbulhante, depois arrastado. Os números saem das correlações usadas por engenheiros.</p></div>
+  <div class="sim">
+    <canvas id="bedCanvas" class="simcanvas" width="320" height="460" aria-label="Animação do leito fluidizado"></canvas>
+    <section class="card" style="min-width:0">
+      <div class="slider"><div class="top-row"><label for="sU">💨 Velocidade do ar (u)</label><span class="mono" id="uVal">0 m/s</span></div><input type="range" id="sU" min="0" max="1000" step="1" value="${SIM.s}"></div>
+      <div class="slider"><div class="top-row"><label for="sD">⚪ Diâmetro da partícula (d)</label><span class="mono" id="dVal">${fmt(SIM.d, 1)} mm</span></div><input type="range" id="sD" min="0.1" max="3" step="0.1" value="${SIM.d}"></div>
+      <p class="lbl" style="margin-bottom:6px">Material do leito</p>
+      <div class="seg" role="group" aria-label="Material">${Object.entries(BEDMAT).map(([k, v]) => `<button data-act="bedmat" data-arg="${k}" aria-pressed="${SIM.mat === k}">${v.n}</button>`).join('')}</div>
+      <p style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span class="regime" id="regime">Leito fixo</span>${pauseBtn()}</p>
+      <div class="kv"><div><small>u<sub>mf</sub> mínima fluidização</small><b id="kUmf">–</b></div><div><small>u<sub>t</sub> velocidade terminal</small><b id="kUt">–</b></div><div><small>ΔP do leito (30 cm)</small><b id="kDp">–</b></div></div>
+      <canvas id="dpCanvas" width="340" height="190" style="width:100%;max-width:520px;height:auto;display:block" aria-label="Gráfico de queda de pressão versus velocidade"></canvas>
+      <h3 style="font-size:1.15rem;margin:14px 0 8px">Missões (+15 XP cada)</h3>
+      <ul class="missions" id="missions">${MISSIONS.map(([k, t]) => `<li class="${m[k] ? 'done' : ''}" data-m="${k}"><i>${m[k] ? '✓' : ''}</i>${t}</li>`).join('')}</ul>
+      <p class="note" style="margin-top:12px">u<sub>mf</sub> pela correlação de Wen &amp; Yu (1966) e u<sub>t</sub> pelo arrasto de Schiller-Naumann, com ar a 20 °C e partículas consideradas esféricas. A animação é ilustrativa; os números são calculados.</p>
+    </section>
+  </div>
+  <div class="learn-cta"><button class="btn ghost" data-act="tab" data-arg="cfd">Túnel de vento CFD →</button><button class="btn" data-act="tab" data-arg="jogar">Fazer o desafio final →</button></div>`;
+}
+
+function setupCanvas(cv, w, h){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = w * dpr; cv.height = h * dpr;
+  if(!cv.style.width) cv.style.width = w + 'px';
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return ctx;
+}
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888'; }
+
+function initLeito(){
+  const cv = $('#bedCanvas'); if(!cv) return;
+  const W = 320, H = 460; const ctx = setupCanvas(cv, W, H);
+  cv.style.maxWidth = '100%'; cv.style.height = 'auto';
+  const dc = $('#dpCanvas'); const dctx = setupCanvas(dc, 340, 190); dc.style.width = '100%';
+  const floor = 428, left = 24, right = W - 24, r = 5;
+  const parts = [];
+  for(let row = 0; row < 11; row++){
+    for(let x = left + r + (row % 2 ? r : 0); x <= right - r; x += 2 * r){
+      const y = floor - r - row * (2 * r * 0.87);
+      parts.push({x, y, hx:x, hy:y, vx:0, vy:0});
+    }
+  }
+  const topHome = floor - 11 * 2 * r * 0.87;
+  const bubbles = []; const air = Array.from({length:46}, () => ({x:left + Math.random() * (right - left), y:Math.random() * floor}));
+  let F = fluidCalc(SIM.d, BEDMAT[SIM.mat].rho);
+
+  function update(){
+    F = fluidCalc(SIM.d, BEDMAT[SIM.mat].rho);
+    const u = sliderToU(SIM.s);
+    const reg = regimeOf(u, F);
+    $('#uVal').textContent = fmt(u, 2) + ' m/s';
+    $('#dVal').textContent = fmt(SIM.d, 1) + ' mm';
+    $('#kUmf').textContent = fmt(F.umf, 2) + ' m/s';
+    $('#kUt').textContent = fmt(F.ut, 2) + ' m/s';
+    const dp = u < F.umf ? F.dPb * u / F.umf : u < F.ut ? F.dPb : F.dPb * 0.15;
+    $('#kDp').textContent = fmt(dp / 1000, 2) + ' kPa';
+    const rg = $('#regime'); rg.textContent = REG[reg].n; rg.style.setProperty('--rc', REG[reg].c);
+    drawDP(u);
+    // missões
+    const us = cur(); us.missions = us.missions || {};
+    const key = reg === 'fixo' ? (u > 0.005 ? 'fixo' : null) : reg;
+    if(key && !us.missions[key]){
+      const bB = badgesOf(us).filter(b => b.on).length;
+      us.missions[key] = true; save(); beep('ok');
+      const li = document.querySelector('#missions [data-m="' + key + '"]'); if(li){ li.classList.add('done'); li.firstElementChild.textContent = '✓'; }
+      toast('Missão cumprida: +15 XP');
+      if(badgesOf(us).filter(b => b.on).length > bB){ confetti(); toast('Nova conquista: Exploração do Leito 🧪'); }
+      const chip = document.querySelector('.chip .mono'); if(chip) chip.textContent = xpOf(us) + ' XP';
+    }
+  }
+  function drawDP(u){
+    const w = 340, h = 190, pl = 44, pr = 12, pt = 14, pb = 34;
+    const ink = cssVar('--ink'), mu = cssVar('--muted'), ln = cssVar('--line'), br = cssVar('--sky'), fl = cssVar('--flame');
+    dctx.clearRect(0, 0, w, h);
+    const umax = Math.min(12, Math.max(F.ut * 1.25, F.umf * 3));
+    const X = v => pl + v / umax * (w - pl - pr), Y = p => h - pb - p / (F.dPb * 1.2) * (h - pt - pb);
+    dctx.strokeStyle = ln; dctx.lineWidth = 1;
+    for(let i = 0; i <= 4; i++){ const y = pt + i * (h - pt - pb) / 4; dctx.beginPath(); dctx.moveTo(pl, y); dctx.lineTo(w - pr, y); dctx.stroke(); }
+    dctx.fillStyle = mu; dctx.font = '700 10px Nunito, system-ui, sans-serif';
+    dctx.textAlign = 'right';
+    [0, .5, 1].forEach(t => { const p = F.dPb * 1.2 * t; dctx.fillText(fmt(p / 1000, 1), pl - 6, Y(p) + 3); });
+    dctx.save(); dctx.translate(11, (h - pb + pt) / 2); dctx.rotate(-Math.PI / 2); dctx.textAlign = 'center'; dctx.fillText('ΔP (kPa)', 0, 0); dctx.restore();
+    dctx.textAlign = 'center'; dctx.fillText('velocidade do ar (m/s)', (pl + w - pr) / 2, h - 4);
+    [0, umax / 2, umax].forEach(v => dctx.fillText(fmt(v, 1), X(v), h - pb + 13));
+    dctx.strokeStyle = br; dctx.lineWidth = 3; dctx.beginPath(); dctx.moveTo(X(0), Y(0)); dctx.lineTo(X(F.umf), Y(F.dPb)); dctx.lineTo(X(Math.min(F.ut, umax)), Y(F.dPb)); dctx.stroke();
+    if(F.ut < umax){ dctx.setLineDash([5, 4]); dctx.beginPath(); dctx.moveTo(X(F.ut), Y(F.dPb)); dctx.lineTo(X(Math.min(umax, F.ut * 1.15)), Y(F.dPb * .15)); dctx.lineTo(X(umax), Y(F.dPb * .15)); dctx.stroke(); dctx.setLineDash([]); }
+    dctx.fillStyle = ink; dctx.font = '800 10px Nunito, system-ui, sans-serif';
+    dctx.fillText('umf', X(F.umf), Y(F.dPb) - 8);
+    if(F.ut < umax) dctx.fillText('ut', X(F.ut), Y(F.dPb) - 8);
+    const dp = u < F.umf ? F.dPb * u / F.umf : u < F.ut ? F.dPb : F.dPb * 0.15;
+    const ux = Math.min(u, umax);
+    dctx.fillStyle = fl; dctx.beginPath(); dctx.arc(X(ux), Y(dp), 6, 0, Math.PI * 2); dctx.fill();
+    dctx.strokeStyle = cssVar('--surface'); dctx.lineWidth = 2; dctx.stroke();
+  }
+
+  function frame(){
+    if(SIM.paused){ SIM.raf = requestAnimationFrame(frame); return; }
+    const u = sliderToU(SIM.s); const reg = regimeOf(u, F);
+    const fb = reg === 'borb' ? clamp((u - F.umf) / (Math.min(F.ut, F.umf * 8) - F.umf), 0, 1) : 0;
+    const E = 1 + 1.5 * Math.sqrt(fb);
+    const top = floor - (floor - topHome) * E;
+    // partículas
+    for(const p of parts){
+      if(reg === 'fixo'){ p.x += (p.hx - p.x) * 0.08; p.y += (p.hy - p.y) * 0.08; p.vx = p.vy = 0; }
+      else if(reg === 'borb'){
+        const a = 0.5 + 2.4 * fb;
+        const ty = floor - (floor - p.hy) * E;
+        p.vx += (Math.random() - .5) * a; p.vy += (Math.random() - .5) * a + (ty - p.y) * 0.015;
+        p.vx *= .88; p.vy *= .88; p.x += p.vx; p.y += p.vy;
+        if(p.y < top) { p.y = top; p.vy = Math.abs(p.vy); }
+      } else {
+        const sp = 1.6 + 4 * Math.min(1, (u - F.ut) / F.ut);
+        p.vy = -sp * (0.7 + Math.random() * 0.6); p.vx += (Math.random() - .5) * 1.2; p.vx *= .9;
+        p.x += p.vx; p.y += p.vy;
+        if(p.y < 18){ p.y = floor - Math.random() * 30; p.x = left + Math.random() * (right - left); }
+      }
+      if(p.x < left + r){ p.x = left + r; p.vx = Math.abs(p.vx); }
+      if(p.x > right - r){ p.x = right - r; p.vx = -Math.abs(p.vx); }
+      if(p.y > floor - r){ p.y = floor - r; p.vy = -Math.abs(p.vy) * .5; }
+    }
+    // bolhas
+    if(reg === 'borb' && Math.random() < 0.04 + 0.22 * fb) bubbles.push({x:left + 20 + Math.random() * (right - left - 40), y:floor - 6, r:4, rmax:8 + 26 * fb, sp:1 + 2.4 * fb});
+    for(let i = bubbles.length - 1; i >= 0; i--){
+      const b = bubbles[i]; b.y -= b.sp; b.r = Math.min(b.rmax, b.r + 0.3);
+      for(const p of parts){ const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy); if(d < b.r + r && d > 0.01){ const k = (b.r + r) / d; p.x = b.x + dx * k; p.y = b.y + dy * k; p.vy -= 0.15; } }
+      if(b.y - b.r < top || reg !== 'borb'){ bubbles.splice(i, 1); }
+    }
+    // desenho
+    ctx.fillStyle = '#0B1E2E'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#10293D'; ctx.fillRect(left, 0, right - left, floor);
+    // ar
+    if(u > 0.005){
+      ctx.strokeStyle = 'rgba(140,200,255,.35)'; ctx.lineWidth = 2;
+      const v = Math.min(9, 0.6 + u * 1.6);
+      for(const a of air){ a.y -= v; if(a.y < 0) { a.y = floor; a.x = left + Math.random() * (right - left); } ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x, a.y + 6 + v); ctx.stroke(); }
+    }
+    for(const b of bubbles){ ctx.fillStyle = 'rgba(16,41,61,.9)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(160,220,255,.45)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    ctx.fillStyle = BEDMAT[SIM.mat].c;
+    for(const p of parts){ ctx.beginPath(); ctx.arc(p.x, p.y, r - .4, 0, Math.PI * 2); ctx.fill(); }
+    // paredes e distribuidor
+    ctx.fillStyle = '#4A6577'; ctx.fillRect(left - 6, 0, 6, floor + 8); ctx.fillRect(right, 0, 6, floor + 8);
+    ctx.fillStyle = '#8FA7B5'; ctx.fillRect(left - 6, floor, right - left + 12, 6);
+    ctx.fillStyle = '#0B1E2E'; for(let x = left + 6; x < right; x += 12) ctx.fillRect(x, floor + 1, 4, 4);
+    ctx.fillStyle = '#A9C6D8'; ctx.font = '800 11px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('ar ↑ (distribuidor)', W / 2, floor + 22);
+    if(reg === 'arraste'){ ctx.fillStyle = '#FFB01F'; ctx.fillText('↑ partículas indo para o ciclone ↑', W / 2, 12); }
+    if(reg === 'borb' && !reduceMotion){ ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillText('bolhas de ar', W / 2, Math.max(28, top - 10)); }
+    SIM.raf = requestAnimationFrame(frame);
+  }
+  $('#sU').addEventListener('input', e => { SIM.s = +e.target.value; update(); });
+  $('#sD').addEventListener('input', e => { SIM.d = +e.target.value; update(); });
+  update();
+  SIM.raf = requestAnimationFrame(frame);
+}
+
+/* ---------- túnel de vento CFD (fluidos estáveis, Stam 1999) ---------- */
+const CFD = {NX:96, NY:48, U:0.9, shape:'cilindro', mode:'fumaca', grid:false, vec:false, erase:false};
+function viewCFD(){
+  const seg = (key, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button data-act="cfd" data-k="${key}" data-arg="${v}" aria-pressed="${CFD[key] === v}">${l}</button>`).join('')}</div>`;
+  return `<div class="watt">${WATT}<p class="bubble">Este é um mini-CFD de verdade: a cada quadro o computador resolve as equações do escoamento em ${CFD.NX} × ${CFD.NY} = ${CFD.NX * CFD.NY} células. Desenhe obstáculos com o dedo ou com o mouse!</p></div>
+  <section class="card cfdbox">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:end">
+      <div style="min-width:0"><p class="lbl" style="margin-bottom:6px">Obstáculo</p>${seg('shape', [['cilindro','Cilindro'],['placa','Partícula plana'],['leito','Leito de partículas'],['livre','Livre (desenhe)']])}</div>
+      <div style="min-width:0"><p class="lbl" style="margin-bottom:6px">Visualizar</p>${seg('mode', [['fumaca','Fumaça'],['vel','Velocidade'],['pres','Pressão']])}</div>
+    </div>
+    <div class="cfd-wrap"><canvas id="cfdCanvas" class="simcanvas" width="576" height="288" aria-label="Simulação de escoamento em túnel de vento"></canvas></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <div class="slider" style="flex:1 1 260px;margin:0"><div class="top-row"><label for="cU">💨 Velocidade de entrada</label><span class="mono" id="cUv">${fmt(CFD.U, 2)}</span></div><input type="range" id="cU" min="0.2" max="1.6" step="0.05" value="${CFD.U}"></div>
+      <div class="checks"><label><input type="checkbox" id="cGrid" ${CFD.grid ? 'checked' : ''}> Mostrar malha</label><label><input type="checkbox" id="cVec" ${CFD.vec ? 'checked' : ''}> Vetores</label><label><input type="checkbox" id="cErase" ${CFD.erase ? 'checked' : ''}> Borracha</label></div>
+      <span style="display:flex;gap:10px;align-items:center">${pauseBtn()}<span class="mono muted" id="cIt">iteração 0</span></span>
+    </div>
+    <ol class="steps">
+      <li><b>Geometria:</b> o obstáculo que você escolheu ou desenhou.</li>
+      <li><b>Malha:</b> ${CFD.NX * CFD.NY} células quadradas. Ligue “Mostrar malha”.</li>
+      <li><b>Física:</b> fluido incompressível, conservando massa e quantidade de movimento.</li>
+      <li><b>Contorno:</b> ar entra pela esquerda, sai pela direita; paredes em cima e embaixo.</li>
+      <li><b>Solução:</b> a cada quadro, advecção + 30 iterações de pressão.</li>
+      <li><b>Pós-processamento:</b> cores de fumaça, velocidade ou pressão.</li>
+    </ol>
+    <p class="note">Método de “fluidos estáveis” (Stam, 1999), simplificado para rodar no navegador. Programas como OpenFOAM e MFiX usam os mesmos princípios com muito mais células e física.</p>
+  </section>
+  <div class="learn-cta"><button class="btn ghost" data-act="tab" data-arg="leito">← Simulador de leito</button><button class="btn" data-act="tab" data-arg="jogar">Fazer o desafio final →</button></div>`;
+}
+
+function initCFD(){
+  const cv = $('#cfdCanvas'); if(!cv) return;
+  const NX = CFD.NX, NY = CFD.NY, N = NX * NY, S = 6;
+  const ctx = cv.getContext('2d');
+  const off = document.createElement('canvas'); off.width = NX; off.height = NY; const octx = off.getContext('2d'); const img = octx.createImageData(NX, NY);
+  let u = new Float32Array(N), v = new Float32Array(N), u0 = new Float32Array(N), v0 = new Float32Array(N);
+  let p = new Float32Array(N), p2 = new Float32Array(N), div = new Float32Array(N), dye = new Float32Array(N), dye0 = new Float32Array(N);
+  const solid = new Uint8Array(N);
+  let it = 0;
+  const id = (i, j) => i + j * NX;
+  function setShape(){
+    solid.fill(0);
+    const cyl = (cx, cy, rr) => { for(let j = 0; j < NY; j++) for(let i = 0; i < NX; i++) if((i - cx) ** 2 + (j - cy) ** 2 <= rr * rr) solid[id(i, j)] = 1; };
+    if(CFD.shape === 'cilindro') cyl(24, NY / 2 + 0.5, 6);
+    else if(CFD.shape === 'placa'){ for(let t = 0; t <= 1; t += 0.01){ const x = 20 + t * 9, y = 15 + t * 18; cyl(x, y, 1.3); } }
+    else if(CFD.shape === 'leito'){ for(let c = 0; c < 4; c++) for(let rI = 0; rI < 5; rI++){ cyl(18 + c * 7, 7 + rI * 8.5 + (c % 2 ? 4 : 0), 2.4); } }
+    for(let k = 0; k < N; k++) if(solid[k]){ u[k] = v[k] = dye[k] = 0; }
+  }
+  setShape();
+  for(let k = 0; k < N; k++) if(!solid[k]) u[k] = CFD.U;
+  function advect(dst, src){
+    for(let j = 0; j < NY; j++) for(let i = 0; i < NX; i++){
+      const k = i + j * NX; if(solid[k]){ dst[k] = 0; continue; }
+      let x = i - u[k], y = j - v[k];
+      x = clamp(x, 0, NX - 1.001); y = clamp(y, 0, NY - 1.001);
+      const i0 = x | 0, j0 = y | 0, sx = x - i0, sy = y - j0, k0 = i0 + j0 * NX;
+      dst[k] = (1 - sx) * ((1 - sy) * src[k0] + sy * src[k0 + NX]) + sx * ((1 - sy) * src[k0 + 1] + sy * src[k0 + 1 + NX]);
+    }
+  }
+  function bounds(){
+    for(let j = 0; j < NY; j++){
+      const k = id(0, j); if(!solid[k]){ u[k] = CFD.U; v[k] = 0; }
+      dye[k] = (j % 6 < 2) ? 1 : 0;
+      const kr = id(NX - 1, j); u[kr] = u[kr - 1]; v[kr] = v[kr - 1];
+    }
+    for(let i = 0; i < NX; i++){ v[id(i, 0)] = 0; v[id(i, NY - 1)] = 0; }
+  }
+  function project(){
+    for(let j = 0; j < NY; j++) for(let i = 0; i < NX; i++){
+      const k = i + j * NX; if(solid[k]){ div[k] = 0; p[k] = 0; continue; }
+      const uR = i < NX - 1 ? (solid[k + 1] ? 0 : u[k + 1]) : u[k];
+      const uL = i > 0 ? (solid[k - 1] ? 0 : u[k - 1]) : u[k];
+      const vD = j < NY - 1 ? (solid[k + NX] ? 0 : v[k + NX]) : 0;
+      const vU = j > 0 ? (solid[k - NX] ? 0 : v[k - NX]) : 0;
+      div[k] = -0.5 * (uR - uL + vD - vU);
+    }
+    for(let n = 0; n < 30; n++){
+      for(let j = 0; j < NY; j++) for(let i = 0; i < NX; i++){
+        const k = i + j * NX; if(solid[k]){ p2[k] = 0; continue; }
+        const pc = p[k];
+        const pL = i > 0 && !solid[k - 1] ? p[k - 1] : pc;
+        const pR = i < NX - 1 ? (solid[k + 1] ? pc : p[k + 1]) : 0;
+        const pU = j > 0 && !solid[k - NX] ? p[k - NX] : pc;
+        const pD = j < NY - 1 && !solid[k + NX] ? p[k + NX] : pc;
+        p2[k] = (div[k] + pL + pR + pU + pD) / 4;
+      }
+      const t = p; p = p2; p2 = t;
+    }
+    for(let j = 0; j < NY; j++) for(let i = 0; i < NX; i++){
+      const k = i + j * NX; if(solid[k]) continue;
+      const pc = p[k];
+      const pL = i > 0 && !solid[k - 1] ? p[k - 1] : pc;
+      const pR = i < NX - 1 ? (solid[k + 1] ? pc : p[k + 1]) : 0;
+      const pU = j > 0 && !solid[k - NX] ? p[k - NX] : pc;
+      const pD = j < NY - 1 && !solid[k + NX] ? p[k + NX] : pc;
+      u[k] -= 0.5 * (pR - pL); v[k] -= 0.5 * (pD - pU);
+    }
+  }
+  function step(){
+    bounds();
+    advect(u0, u); advect(v0, v);
+    let t = u; u = u0; u0 = t; t = v; v = v0; v0 = t;
+    advect(dye0, dye); t = dye; dye = dye0; dye0 = t;
+    for(let k = 0; k < N; k++) dye[k] *= 0.999;
+    for(let j = 2; j < NY - 2; j++){ const k = id(34, j); if(!solid[k]) v[k] += (Math.random() - .5) * 0.02; }
+    project(); bounds(); it++;
+  }
+  const STOPS = [[20,40,110],[30,130,220],[40,210,160],[255,210,60],[240,80,50]];
+  function cmap(t){ t = clamp(t, 0, 1) * (STOPS.length - 1); const i = Math.min(STOPS.length - 2, t | 0), f = t - i, a = STOPS[i], b = STOPS[i + 1]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; }
+  function draw(){
+    const d = img.data; let pmax = 1e-6;
+    if(CFD.mode === 'pres') for(let k = 0; k < N; k++) if(!solid[k]) pmax = Math.max(pmax, Math.abs(p[k]));
+    for(let k = 0; k < N; k++){
+      let c;
+      if(solid[k]) c = [190, 200, 210];
+      else if(CFD.mode === 'fumaca'){ const s = clamp(dye[k], 0, 1); c = [11 + s * 244, 30 + s * 196, 46 + s * 120]; }
+      else if(CFD.mode === 'vel'){ c = cmap(Math.hypot(u[k], v[k]) / (CFD.U * 1.8)); }
+      else { const s = clamp(p[k] / pmax, -1, 1); c = s > 0 ? [255, 255 - 190 * s, 255 - 210 * s] : [255 + 215 * s, 255 + 140 * s, 255]; }
+      d[k * 4] = c[0]; d[k * 4 + 1] = c[1]; d[k * 4 + 2] = c[2]; d[k * 4 + 3] = 255;
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(off, 0, 0, NX * S, NY * S);
+    if(CFD.grid){ ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 1; ctx.beginPath(); for(let i = 0; i <= NX; i++){ ctx.moveTo(i * S + .5, 0); ctx.lineTo(i * S + .5, NY * S); } for(let j = 0; j <= NY; j++){ ctx.moveTo(0, j * S + .5); ctx.lineTo(NX * S, j * S + .5); } ctx.stroke(); }
+    if(CFD.vec){ ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); for(let j = 2; j < NY; j += 4) for(let i = 2; i < NX; i += 4){ const k = id(i, j); if(solid[k]) continue; const x = i * S + S / 2, y = j * S + S / 2, sc = 9 / Math.max(CFD.U, .2); const ex = x + u[k] * sc, ey = y + v[k] * sc; ctx.moveTo(x, y); ctx.lineTo(ex, ey); const a = Math.atan2(ey - y, ex - x); ctx.moveTo(ex, ey); ctx.lineTo(ex - 3 * Math.cos(a - .5), ey - 3 * Math.sin(a - .5)); ctx.moveTo(ex, ey); ctx.lineTo(ex - 3 * Math.cos(a + .5), ey - 3 * Math.sin(a + .5)); } ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '800 12px Nunito, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillText('entrada de ar →', 8, 16); ctx.textAlign = 'right'; ctx.fillText('→ saída', NX * S - 8, 16);
+    const ci = $('#cIt'); if(ci) ci.textContent = 'iteração ' + it.toLocaleString('pt-BR');
+  }
+  function loop(){ if(!SIM.paused){ step(); step(); } draw(); SIM.cfdRaf = requestAnimationFrame(loop); }
+  // desenhar obstáculos
+  let drawing = false;
+  function paint(e){
+    const rc = cv.getBoundingClientRect();
+    const gi = (e.clientX - rc.left) / rc.width * NX, gj = (e.clientY - rc.top) / rc.height * NY;
+    for(let j = Math.floor(gj - 2); j <= gj + 2; j++) for(let i = Math.floor(gi - 2); i <= gi + 2; i++){
+      if(i < 2 || i >= NX - 1 || j < 0 || j >= NY) continue;
+      if((i - gi) ** 2 + (j - gj) ** 2 > 4) continue;
+      const k = id(i, j); solid[k] = CFD.erase ? 0 : 1; if(!CFD.erase){ u[k] = v[k] = dye[k] = 0; }
+    }
+  }
+  cv.addEventListener('pointerdown', e => { drawing = true; cv.setPointerCapture(e.pointerId); paint(e); });
+  cv.addEventListener('pointermove', e => { if(drawing) paint(e); });
+  cv.addEventListener('pointerup', () => drawing = false);
+  cv.addEventListener('pointercancel', () => drawing = false);
+  $('#cU').addEventListener('input', e => { CFD.U = +e.target.value; $('#cUv').textContent = fmt(CFD.U, 2); });
+  $('#cGrid').addEventListener('change', e => { CFD.grid = e.target.checked; draw(); });
+  $('#cVec').addEventListener('change', e => { CFD.vec = e.target.checked; draw(); });
+  $('#cErase').addEventListener('change', e => { CFD.erase = e.target.checked; });
+  SIM.cfdApi = {setShape: () => { setShape(); draw(); }, draw};
+  SIM.cfdRaf = requestAnimationFrame(loop);
+}
+
+function stopSims(){ cancelAnimationFrame(SIM.raf); cancelAnimationFrame(SIM.cfdRaf); SIM.cfdApi = null; }
+
+/* ---------- professor ---------- */
+function viewPin(){
+  const first = !store.pin;
+  return `<main class="teacher wrap" style="max-width:520px">
+    <section class="card"><h1 style="font-size:1.8rem;margin-bottom:8px">Painel do(a) professor(a)</h1>
+      <p class="muted" style="margin-bottom:16px">${first ? 'Primeiro acesso: crie uma senha para o painel. Ela fica salva só neste navegador e evita que estudantes apaguem os dados sem querer.' : 'Digite a senha do painel.'}</p>
+      <form id="pinForm" novalidate><div class="field"><label class="lbl" for="pinIn">${first ? 'Nova senha (mínimo 4 caracteres)' : 'Senha'}</label><input type="password" id="pinIn" autocomplete="off"></div>
+      <p class="err" id="pinErr"></p><button class="btn" type="submit">${first ? 'Criar e entrar' : 'Entrar'}</button></form>
+    </section></main>`;
+}
+
+function viewTeacher(){
+  if(!state.teacherOk){ state.screen = 'pin'; return viewPin(); }
+  const all = Object.values(store.users);
+  const turmas = [...new Set(all.map(u => u.turma))].sort();
+  const f = state.turma || '';
+  const us = all.filter(u => !f || u.turma === f).sort((a, b) => xpOf(b) - xpOf(a));
+  const avgXp = us.length ? Math.round(us.reduce((s, u) => s + xpOf(u), 0) / us.length) : 0;
+  const phasesDone = us.reduce((s, u) => s + PHASES.filter(p => done(u, p.id)).length, 0);
+  const complete = us.filter(u => PHASES.every(p => done(u, p.id))).length;
+  const perPhase = PHASES.map(p => { const xs = us.map(u => u.phases[p.id]).filter(Boolean); return {p, n:xs.length, avg: xs.length ? xs.reduce((s, x) => s + x.best, 0) / xs.length : 0}; });
+  const seen = {}, errs = {};
+  us.forEach(u => { Object.entries(u.seen || {}).forEach(([k, v]) => seen[k] = (seen[k] || 0) + v); Object.entries(u.errors || {}).forEach(([k, v]) => errs[k] = (errs[k] || 0) + v); });
+  const worst = Object.keys(errs).map(k => ({k, e:errs[k], s:seen[k] || errs[k], r:errs[k] / (seen[k] || errs[k])})).filter(x => x.s >= 1).sort((a, b) => b.r - a.r || b.e - a.e).slice(0, 8);
+  const cf = state.confirm;
+  return `<main class="teacher wrap">
+    <div class="phase-head"><div style="min-width:0"><p class="eyebrow">Gestão da turma</p><h1 style="font-size:clamp(1.7rem,4vw,2.4rem)">Painel do(a) professor(a)</h1></div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="lbl" for="tFilter">Turma</label><select id="tFilter" style="width:auto"><option value="">Todas</option>${turmas.map(t => `<option ${t === f ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select><button class="btn ghost small" data-act="tlock">Bloquear painel</button></div></div>
+    <div class="stats">
+      <div class="stat"><b>${us.length}</b><span>estudantes</span></div>
+      <div class="stat"><b>${avgXp}</b><span>XP médio</span></div>
+      <div class="stat"><b>${phasesDone}</b><span>fases concluídas</span></div>
+      <div class="stat"><b>${complete}</b><span>jornadas completas</span></div>
+    </div>
+    <section class="card"><h3 style="font-size:1.3rem;margin-bottom:8px">Estudantes</h3>
+      ${us.length ? `<div class="tbl-wrap"><table><thead><tr><th>Estudante</th><th>Turma</th><th>Nível</th><th>XP</th>${PHASES.map(p => `<th title="${p.title}">F${p.id}</th>`).join('')}<th>Missões</th><th>Último acesso</th><th></th></tr></thead><tbody>
+      ${us.map(u => `<tr><td style="white-space:nowrap"><span class="ava" style="display:inline-grid;width:26px;height:26px;font-size:.9rem;vertical-align:middle">${u.avatar}</span> <b>${esc(u.name)}</b></td><td>${esc(u.turma)}</td><td>${levelOf(xpOf(u)).i + 1}</td><td class="mono">${xpOf(u)}</td>${PHASES.map(p => { const x = u.phases[p.id]; return `<td class="mono" title="${x ? Math.round(x.best * 100) + '% · ' + x.attempts + ' tentativa(s)' : ''}">${x ? Math.round(x.best * 100) + '%' : '–'}</td>`; }).join('')}<td class="mono">${Object.values(u.missions || {}).filter(Boolean).length}/3</td><td class="muted" style="white-space:nowrap">${u.last ? new Date(u.last).toLocaleDateString('pt-BR') : '–'}</td><td><button class="btn ${cf === 'del:' + u.id ? 'danger' : 'ghost'} small" data-act="deluser" data-arg="${esc(u.id)}">${cf === 'del:' + u.id ? 'Confirmar' : 'Excluir'}</button></td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted">Nenhum estudante ainda. Peça para a turma entrar pela tela inicial neste computador, ou importe os dados de outros computadores abaixo.</p>'}
+    </section>
+    <div class="two">
+      <section class="card"><h3 style="font-size:1.3rem">Acerto médio por fase</h3><p class="note">Melhor tentativa de cada estudante.</p>
+        ${perPhase.map(x => `<div class="pbar"><span>F${x.p.id} · ${x.p.title}</span><span class="b"><i style="width:${x.avg * 100}%;background:${x.p.pc}"></i></span><span class="mono">${x.n ? Math.round(x.avg * 100) + '%' : '–'}</span></div>`).join('')}
+      </section>
+      <section class="card"><h3 style="font-size:1.3rem">O que a turma mais erra</h3><p class="note">Bom ponto de partida para a próxima aula.</p>
+        ${worst.length ? `<div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Erros</th><th>Taxa</th></tr></thead><tbody>${worst.map(w => `<tr><td>${esc(ITEM_LABEL[w.k] || w.k)}</td><td class="mono">${w.e}/${w.s}</td><td class="mono">${Math.round(w.r * 100)}%</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Ainda sem erros registrados.</p>'}
+      </section>
+    </div>
+    <div class="two">
+      <section class="card"><h3 style="font-size:1.3rem;margin-bottom:10px">Configurações</h3>
+        <label class="switch"><input type="checkbox" id="tUnlock" ${store.unlockAll ? 'checked' : ''}> Modo apresentação: liberar todas as fases</label>
+        <p class="note" style="margin:4px 0 12px 30px">Útil em feiras e aulas expositivas, para ir direto ao simulador.</p>
+        <label class="switch"><input type="checkbox" id="tSound" ${store.sound ? 'checked' : ''}> Efeitos sonoros</label>
+        <form id="newPin" style="margin-top:16px" novalidate><div class="field"><label class="lbl" for="np">Trocar a senha do painel</label><input type="password" id="np" autocomplete="off" placeholder="Nova senha"></div><button class="btn ghost small" type="submit">Salvar nova senha</button></form>
+      </section>
+      <section class="card"><h3 style="font-size:1.3rem;margin-bottom:6px">Dados da turma</h3>
+        <p class="note" style="margin-bottom:10px">O progresso fica salvo no navegador de cada computador. Para juntar a turma, copie os dados de cada máquina e importe tudo em uma só.</p>
+        <textarea id="exportTxt" readonly aria-label="Dados exportados">${esc(JSON.stringify({app:'dolixoaluz', v:1, users:store.users}))}</textarea>
+        <div class="row-btns" style="justify-content:flex-start;margin-top:8px"><button class="btn small" data-act="copyexp">Copiar dados</button><button class="btn ghost small" data-act="dlexp">Baixar arquivo .json</button></div>
+        <label class="lbl" for="importTxt" style="display:block;margin-top:14px">Importar (cole aqui os dados de outro computador)</label>
+        <textarea id="importTxt" placeholder='{"app":"dolixoaluz",...}'></textarea>
+        <div class="row-btns" style="justify-content:flex-start;margin-top:8px"><button class="btn small" data-act="import">Mesclar dados</button><button class="btn ${cf === 'reset' ? 'danger' : 'ghost'} small" data-act="resetall">${cf === 'reset' ? 'Clique de novo para apagar tudo' : 'Apagar todos os dados'}</button></div>
+      </section>
+    </div>
+  </main>`;
+}
+
+function mergeUsers(inc){
+  let n = 0;
+  Object.values(inc || {}).forEach(x => {
+    if(!x || !x.id || !x.name) return;
+    const y = store.users[x.id];
+    if(!y){ store.users[x.id] = {id:x.id, name:String(x.name).slice(0, 40), turma:String(x.turma || '').slice(0, 24), avatar:AVATARS.includes(x.avatar) ? x.avatar : AVATARS[0], phases:x.phases || {}, missions:x.missions || {}, seen:x.seen || {}, errors:x.errors || {}, created:x.created || Date.now(), last:x.last || 0}; n++; return; }
+    Object.entries(x.phases || {}).forEach(([k, p]) => { const q = y.phases[k]; if(!q || (p.xp || 0) > (q.xp || 0) || (p.best || 0) > (q.best || 0)) y.phases[k] = {xp:Math.max(p.xp || 0, q ? q.xp : 0), stars:Math.max(p.stars || 0, q ? q.stars : 0), best:Math.max(p.best || 0, q ? q.best : 0), attempts:Math.max(p.attempts || 0, q ? q.attempts : 0), last:p.last, at:p.at}; });
+    y.missions = y.missions || {}; Object.entries(x.missions || {}).forEach(([k, v]) => { if(v) y.missions[k] = true; });
+    ['seen', 'errors'].forEach(f => { y[f] = y[f] || {}; Object.entries(x[f] || {}).forEach(([k, v]) => y[f][k] = Math.max(y[f][k] || 0, v)); });
+    y.last = Math.max(y.last || 0, x.last || 0); n++;
+  });
+  return n;
+}
+
+/* ---------- sobre e certificado ---------- */
+function viewAbout(){
+  return `<main class="about wrap">
+    <div><p class="eyebrow">Edital FAPES/SEDU nº 17/2025 · PICJr 2026</p><h1 style="font-size:clamp(1.8rem,4.5vw,2.8rem);margin-top:6px">Simulação computacional para aproveitamento energético de resíduos sólidos</h1></div>
+    <div class="two">
+      <section class="card"><h3>O projeto</h3><p>O projeto usa a simulação computacional e a fluidização para estudar o aproveitamento energético de resíduos sólidos urbanos, com foco nas <b>embalagens cartonadas (Tetra Pak)</b>. Estudantes do ensino médio participam de ensaios em leito fluidizado e de análises digitais do comportamento dos materiais e da eficiência energética.</p><p style="margin-top:8px"><b>Objetivo geral:</b> contribuir para soluções sustentáveis no gerenciamento de resíduos por meio da modelagem e simulação fluidodinâmica de reatores de leito fluidizado, estimulando a economia circular.</p></section>
+      <section class="card"><h3>Ficha</h3><ul><li><b>Instituição executora:</b> UNIVC, Centro Universitário Vale do Cricaré</li><li><b>Município:</b> São Mateus (ES)</li><li><b>Duração:</b> 10 meses, início previsto em março de 2026</li><li><b>Escola parceira:</b> EEEFM Marita Motta Santos</li><li><b>Coordenação:</b> Estevão Luiz de Oliveira Gonçalves</li><li><b>Tutoria:</b> Francisnay Ribeiro da Silva</li><li><b>Pesquisador colaborador:</b> Felipe Oliveira Souza</li><li><b>Bolsistas ICJr:</b> equipe de estudantes do ensino médio</li></ul></section>
+    </div>
+    <div class="two">
+      <section class="card"><h3>Como o jogo conversa com o projeto</h3><ul><li>Fases 1 e 2: revisão sobre reciclagem e destinação (atividade A-1).</li><li>Fases 3 a 5: aproveitamento energético dos resíduos (A-1, A-8).</li><li>Simulador de leito: os mesmos parâmetros dos ensaios, como vazão de ar, granulometria e material (A-5, A-6).</li><li>Túnel CFD: introdução à simulação computacional (A-7).</li><li>O jogo inteiro é material de divulgação científica para feiras e eventos (A-9, A-11).</li></ul></section>
+      <section class="card"><h3>Roteiro de 5 minutos para a feira</h3><ol><li>Pergunte ao visitante: “para onde vai a caixinha de leite?” e jogue a fase 2 com ele.</li><li>Mostre a calculadora da fase 3 com números da escola.</li><li>No simulador de leito, aumente o ar até borbulhar e explique a u<sub>mf</sub>.</li><li>Compare com o gráfico ΔP × velocidade e com os dados medidos no experimento.</li><li>Termine no túnel CFD: ligue a malha e desenhe um obstáculo.</li></ol><p class="note" style="margin-top:8px">Dica: no painel do(a) professor(a), ligue o “Modo apresentação” para liberar todas as fases.</p></section>
+    </div>
+    <section class="card"><h3>Referências usadas no conteúdo</h3><ul style="font-size:.92rem"><li>ABRELPE. <i>Panorama dos Resíduos Sólidos no Brasil</i>, 2023.</li><li>BRASIL. Lei nº 12.305/2010, Política Nacional de Resíduos Sólidos.</li><li>CONAMA. Resolução nº 275/2001, código de cores para a coleta seletiva.</li><li>WEN, C. Y.; YU, Y. H. A generalized method for predicting the minimum fluidization velocity. <i>AIChE Journal</i>, 1966.</li><li>KUNII, D.; LEVENSPIEL, O. <i>Fluidization Engineering</i>. 2. ed. Butterworth-Heinemann, 1991.</li><li>STAM, J. Stable Fluids. <i>SIGGRAPH</i>, 1999.</li><li>MFiX (NETL), OpenFOAM e ParaView: softwares livres de CFD e visualização.</li></ul></section>
+  </main>`;
+}
+
+function viewCert(){
+  const u = cur(); const xp = xpOf(u); const all = PHASES.every(p => done(u, p.id));
+  if(!all) return `<main class="about wrap"><section class="card"><h2>Quase lá!</h2><p style="margin-top:8px">Conclua as 6 fases para liberar o certificado.</p><p style="margin-top:12px"><button class="btn" data-act="go" data-arg="hub">Voltar ao mapa</button></p></section></main>`;
+  const stars = PHASES.reduce((s, p) => s + (u.phases[p.id].stars || 0), 0);
+  return `<main class="wrap"><section class="cert">
+    ${WATT}
+    <p class="eyebrow">Certificado de conclusão</p>
+    <h1>Do Lixo à Luz</h1>
+    <p>Certificamos que</p>
+    <p class="who">${u.avatar} ${esc(u.name)}</p>
+    <p>da turma <b>${esc(u.turma)}</b> completou a jornada sobre resíduos sólidos, conversão energética e fluidodinâmica computacional, com <b>${xp} XP</b> e <b>${stars} de 18 estrelas</b>, alcançando o nível <b>${levelOf(xp).name}</b>.</p>
+    <p class="muted" style="font-size:.9rem">Projeto PICJr 2026 · UNIVC · São Mateus (ES) · ${new Date().toLocaleDateString('pt-BR')}</p>
+    <p class="note">Tire um print desta tela para guardar.</p>
+    <button class="btn ghost" data-act="go" data-arg="hub">Voltar ao mapa</button>
+  </section></main>`;
+}
+
+/* ---------- pós-renderização ---------- */
+function afterRender(){
+  const lf = $('#loginForm');
+  if(lf){
+    lf.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('#lgName').value.trim().replace(/\s+/g, ' '), turma = $('#lgTurma').value.trim().replace(/\s+/g, ' ');
+      if(name.length < 2){ $('#lgErr').textContent = 'Escreva seu nome (pelo menos 2 letras).'; $('#lgName').focus(); return; }
+      if(!turma){ $('#lgErr').textContent = 'Escreva sua turma, por exemplo “1º ano A”.'; $('#lgTurma').focus(); return; }
+      const id = slug(name) + '|' + slug(turma);
+      let u = store.users[id];
+      if(!u){ u = store.users[id] = {id, name, turma, avatar:state.avatar, phases:{}, missions:{}, seen:{}, errors:{}, created:Date.now()}; }
+      else u.avatar = state.avatar;
+      u.last = Date.now(); store.currentId = id; save();
+      state.screen = 'hub'; render(); window.scrollTo({top:0});
+    });
+  }
+  const pf = $('#pinForm');
+  if(pf){
+    pf.addEventListener('submit', e => {
+      e.preventDefault(); const v = $('#pinIn').value;
+      if(!store.pin){ if(v.length < 4){ $('#pinErr').textContent = 'Use pelo menos 4 caracteres.'; return; } store.pin = v; save(); }
+      else if(v !== store.pin){ $('#pinErr').textContent = 'Senha incorreta. Tente de novo.'; $('#pinIn').select(); return; }
+      state.teacherOk = true; state.screen = 'teacher'; render();
+    });
+    $('#pinIn').focus();
+  }
+  const np = $('#newPin');
+  if(np) np.addEventListener('submit', e => { e.preventDefault(); const v = $('#np').value; if(v.length < 4){ toast('A senha precisa de pelo menos 4 caracteres.'); return; } store.pin = v; save(); $('#np').value = ''; toast('Senha do painel atualizada.'); });
+  const tf = $('#tFilter'); if(tf) tf.addEventListener('change', e => { state.turma = e.target.value; render(); });
+  const tu = $('#tUnlock'); if(tu) tu.addEventListener('change', e => { store.unlockAll = e.target.checked; save(); toast(store.unlockAll ? 'Todas as fases liberadas.' : 'Fases voltam a abrir em sequência.'); });
+  const ts = $('#tSound'); if(ts) ts.addEventListener('change', e => { store.sound = e.target.checked; save(); });
+  if($('#calcOut')){
+    document.querySelectorAll('[data-calc]').forEach(inp => inp.addEventListener('input', e => { const k = e.target.dataset.calc; CALC[k] = +e.target.value; $('#v_' + k).textContent = fmt(CALC[k]) + ' ' + e.target.dataset.unit; calcUpdate(); }));
+    calcUpdate();
+  }
+  if($('#bedCanvas')) initLeito();
+  if($('#cfdCanvas')) initCFD();
+}
+
+/* ---------- ações ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if(!el) return;
+  const act = el.dataset.act, arg = el.dataset.arg;
+  if(act !== 'deluser' && act !== 'resetall') state.confirm = null;
+  switch(act){
+    case 'go':
+      if(arg === 'teacher'){ state.screen = state.teacherOk ? 'teacher' : 'pin'; }
+      else if((arg === 'hub' || arg === 'cert') && !cur()) state.screen = 'login';
+      else state.screen = arg;
+      render(); window.scrollTo({top:0}); break;
+    case 'pick-ava':
+      state.avatar = arg; document.querySelectorAll('.ava-pick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === arg)); break;
+    case 'quick': {
+      const u = store.users[arg]; if(!u) return; u.last = Date.now(); store.currentId = arg; save(); state.screen = 'hub'; render(); window.scrollTo({top:0}); break; }
+    case 'logout': store.currentId = null; save(); run = null; state.screen = 'login'; render(); break;
+    case 'sound': store.sound = !store.sound; save(); render(); break;
+    case 'open': {
+      const id = +arg; if(!unlocked(cur(), id)) return;
+      state.phase = id; state.tab = 'aprender'; run = null; state.screen = 'phase'; render(); window.scrollTo({top:0}); break; }
+    case 'tab':
+      if(arg === 'jogar' && (!run || run.pid !== state.phase || run.result)) startRun(state.phase);
+      state.tab = arg; render(); break;
+    case 'answer': answer(arg); break;
+    case 'pause':
+      SIM.paused = !SIM.paused;
+      document.querySelectorAll('[data-act="pause"]').forEach(b => { b.setAttribute('aria-pressed', SIM.paused); b.textContent = SIM.paused ? '▶ Continuar animação' : '⏸ Pausar animação'; });
+      break;
+    case 'next': nextQ(); break;
+    case 'restart': startRun(state.phase); render(); window.scrollTo({top:0}); break;
+    case 'bedmat': SIM.mat = arg; document.querySelectorAll('[data-act="bedmat"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === arg)); { const s = $('#sU'); if(s) s.dispatchEvent(new Event('input')); } break;
+    case 'cfd': {
+      const k = el.dataset.k; CFD[k] = arg;
+      document.querySelectorAll('[data-act="cfd"][data-k="' + k + '"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === arg));
+      if(k === 'shape' && SIM.cfdApi) SIM.cfdApi.setShape(); else if(SIM.cfdApi) SIM.cfdApi.draw();
+      break; }
+    case 'tlock': state.teacherOk = false; state.screen = cur() ? 'hub' : 'login'; render(); break;
+    case 'deluser':
+      if(state.confirm === 'del:' + arg){ delete store.users[arg]; if(store.currentId === arg) store.currentId = null; save(); state.confirm = null; toast('Estudante excluído.'); }
+      else state.confirm = 'del:' + arg;
+      render(); break;
+    case 'resetall':
+      if(state.confirm === 'reset'){ const pin = store.pin; store = freshStore(); store.pin = pin; save(); run = null; state.confirm = null; toast('Todos os dados foram apagados.'); }
+      else state.confirm = 'reset';
+      render(); break;
+    case 'copyexp': {
+      const ta = $('#exportTxt');
+      const fallback = () => { ta.focus(); ta.select(); toast('Texto selecionado: use Ctrl+C para copiar.'); };
+      try{ navigator.clipboard.writeText(ta.value).then(() => toast('Dados copiados.'), fallback); }catch(err){ fallback(); }
+      break; }
+    case 'dlexp': {
+      try{ const blob = new Blob([$('#exportTxt').value], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'do-lixo-a-luz-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove(); toast('Se o download não começar, use “Copiar dados”.'); }catch(err){ toast('Download indisponível aqui: use “Copiar dados”.'); }
+      break; }
+    case 'import': {
+      try{ const data = JSON.parse($('#importTxt').value); if(!data || data.app !== 'dolixoaluz') throw new Error('x'); const n = mergeUsers(data.users); save(); render(); toast(n + ' estudante(s) mesclado(s).'); }
+      catch(err){ toast('Não reconheci esses dados. Cole o texto completo copiado do painel de outro computador.'); }
+      break; }
+  }
+});
+
+render();
+})();
+</script>
