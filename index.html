@@ -90,7 +90,7 @@ button{font:inherit;color:inherit}
 .ava.big{width:64px;height:64px;font-size:2.2rem}
 
 /* Login */
-.login{min-height:100vh;display:grid;align-items:center;padding-block:32px}
+.login{min-height:calc(100vh - 220px);display:grid;align-items:center;padding-block:32px}
 .login-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
 .hero-title{font-size:clamp(2.8rem,7vw,5.2rem);line-height:.95;color:var(--ink)}
 .hero-title em{font-style:normal;color:var(--brand);display:block}
@@ -287,6 +287,18 @@ textarea{min-height:110px;font-family:var(--font-mono);font-size:.8rem}
 .cert h1{font-size:clamp(2rem,6vw,3.2rem);color:var(--brand)}
 .cert .who{font-family:var(--font-display);font-size:clamp(1.6rem,5vw,2.4rem)}
 
+/* Rodapé com as instituições: faixa branca nos dois temas, porque os logos têm fundo transparente e cores escuras */
+.sponsors{border-top:2px solid var(--line);background:var(--surface)}
+.sponsors .wrap{padding-block:14px calc(14px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;justify-items:center;text-align:center}
+.logos{background:#FFFFFF;border-radius:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 28px;padding:8px 16px;max-width:100%}
+.logos img{display:block;width:auto;height:auto;max-width:100%;max-height:26px}
+.sponsors:not(.big) .logos{opacity:.85}
+.sponsors .note{font-size:.75rem}
+.sponsors.big .wrap{padding-block:28px calc(28px + env(safe-area-inset-bottom,0px));gap:12px}
+.sponsors.big .logos{gap:20px 56px;padding:20px 32px;border-radius:18px;border:2px solid var(--line)}
+.sponsors.big .logos img{max-height:68px}
+.sponsors.big .logos img.wide{max-height:62px}
+@media (max-width:560px){ .sponsors.big .logos img{max-height:52px} .sponsors.big .logos img.wide{max-height:none} .logos img{max-height:22px} }
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:800;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;height:100%}
 
@@ -694,8 +706,19 @@ function render(){
   else if(s === 'hub') html = viewTop() + viewHub();
   else if(s === 'phase') html = viewTop() + viewPhase();
   else if(s === 'cert') html = viewTop() + viewCert();
-  app.innerHTML = html;
+  app.innerHTML = html + viewFooter(state.screen === 'login');
   afterRender();
+}
+
+function viewFooter(big){
+  return `<footer class="sponsors ${big ? 'big' : ''}"><div class="wrap">
+    ${big ? '<p class="eyebrow">Realização e apoio</p>' : ''}
+    <div class="logos">
+      <img src="assets/logo-univc.png" width="384" height="121" alt="UNIVC, Centro Universitário Vale do Cricaré">
+      <img class="wide" src="assets/logo-fapes-governo-es.webp" width="1400" height="218" alt="FAPES, Fundação de Amparo à Pesquisa e Inovação do Espírito Santo; Governo do Estado do Espírito Santo, Secretaria da Ciência, Tecnologia, Inovação e Educação Profissional">
+    </div>
+    <p class="note muted">Projeto PICJr 2026 · Edital FAPES/SEDU nº 17/2025</p>
+  </div></footer>`;
 }
 
 function viewTop(){
