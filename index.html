@@ -624,7 +624,7 @@ function levelOf(xp){ let i = 0; LEVELS.forEach((l, k) => { if(xp >= l[0]) i = k
 function badgesOf(u){ return BADGES.map(b => ({...b, on: !!(u && b.t(u))})); }
 /* ---------- Google Sheets (Apps Script) ---------- */
 // Cole aqui a URL do App da Web do Apps Script (termina em /exec). Vale para todos os computadores.
-const SHEETS_URL_PADRAO = '';
+const SHEETS_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbxSvoyIGJVZ9JexVcOHrL7qkFLl5BvpC_jkqkdx70ojbV2nnliuHJsE0TK_uXq31ppEfQ/exec';
 let flushing = false;
 function sheetsUrl(){ return String(store.sheetsUrl || SHEETS_URL_PADRAO || '').trim(); }
 function cleanUser(u){ return {id:u.id, name:u.name, turma:u.turma, avatar:u.avatar, phases:u.phases || {}, missions:u.missions || {}, seen:u.seen || {}, errors:u.errors || {}, created:u.created || 0, last:u.last || 0}; }
