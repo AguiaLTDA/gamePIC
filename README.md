@@ -10,6 +10,7 @@ Jornada gamificada sobre resíduos sólidos, conversão energética e noções d
 | `app.html` | O código-fonte. Edite aqui. |
 | `build.ps1` | Gera o `index.html` a partir do `app.html`. |
 | `.nojekyll` | Avisa o GitHub Pages para publicar os arquivos como estão. |
+| `apps-script/Codigo.gs` | O código que salva o progresso numa planilha do Google Sheets. |
 
 Depois de editar o `app.html`, rode o `build.ps1` (botão direito > *Executar com o PowerShell*) para atualizar o `index.html`.
 
@@ -62,4 +63,49 @@ git add . && git commit -m "Atualiza o jogo" && git push
 - No primeiro acesso, o painel pede para criar uma senha. Ela fica só naquele navegador.
 - O painel mostra o ranking, o acerto por fase e os itens que a turma mais erra.
 - **Modo apresentação** libera todas as fases. Use em feiras.
-- O progresso fica salvo no navegador de cada aparelho, e o site não envia dados para lugar nenhum. Para juntar a turma, use **Copiar dados** (ou **Baixar .json**) em cada aparelho e **Mesclar dados** em um deles.
+- O progresso sempre fica salvo no navegador de cada aparelho. Sem a planilha, dá para juntar a turma com **Copiar dados** (ou **Baixar .json**) em cada aparelho e **Mesclar dados** em um deles.
+
+## Salvar no Google Sheets
+
+Com a planilha ligada, cada computador envia o progresso sozinho: ao entrar, ao terminar cada fase e ao cumprir cada missão do simulador. Se a internet cair, o envio fica numa fila e sai quando ela voltar.
+
+A planilha ganha duas abas:
+- **Alunos:** uma linha por estudante, com nome, turma, XP, nível, acerto de cada fase, estrelas, missões e último acesso.
+- **Fases concluídas:** uma linha cada vez que alguém termina uma fase, com data, fase, acerto e estrelas.
+
+### 1. Criar a planilha e o script
+
+1. Crie uma planilha nova em <https://sheets.new>, por exemplo "Do Lixo à Luz – Turmas", com a conta Google do(a) professor(a) ou do projeto.
+2. Abra **Extensões > Apps Script**.
+3. Apague o código que aparece e cole todo o conteúdo de [`apps-script/Codigo.gs`](apps-script/Codigo.gs). Salve com o ícone de disquete.
+4. No menu de funções, no alto, escolha **configurar** e clique em **Executar**. Autorize o acesso quando o Google pedir.
+   - Pode aparecer o aviso "O Google não verificou este app". Clique em **Avançado** e depois em **Acessar (não seguro)**. O script é seu e só mexe nesta planilha.
+5. Abra o **Registro de execução**. Ele mostra a **chave do painel do(a) professor(a)**. Anote.
+
+### 2. Publicar como App da Web
+
+1. Clique em **Implantar > Nova implantação**. No ícone de engrenagem, escolha **App da Web**.
+2. Preencha **Executar como: Eu** e **Quem pode acessar: Qualquer pessoa**.
+3. Clique em **Implantar** e copie a **URL do app da Web**, que termina em `/exec`.
+
+> Se você mudar o código do script depois, use **Implantar > Gerenciar implantações > editar (lápis) > Versão: Nova versão**. Assim a URL continua a mesma.
+
+### 3. Ligar o jogo à planilha
+
+1. Abra o `app.html` e cole a URL na linha:
+   ```js
+   const SHEETS_URL_PADRAO = 'https://script.google.com/macros/s/.../exec';
+   ```
+2. Rode o `build.ps1` e envie para o GitHub (`git add . && git commit -m "Liga a planilha" && git push`). A partir daí, todos os computadores enviam para a planilha.
+3. No **painel do(a) professor(a) > Planilha do Google Sheets**, digite a chave e clique em **Salvar e testar**.
+   - **Carregar a turma da planilha** traz para aquele computador os estudantes de todas as máquinas.
+   - **Enviar todos deste computador** manda para a planilha quem jogou antes de ela ser ligada.
+
+Para testar sem mexer no código, cole a URL direto no painel. Nesse caso ela vale só naquele navegador.
+
+### Segurança e privacidade
+
+- A planilha fica na conta Google de quem a criou e não é pública. Ninguém a vê sem que você compartilhe.
+- A URL do script fica visível no código do site. Quem tiver a URL consegue **gravar** registros, mas **não consegue ler** nada sem a chave do(a) professor(a). O script também valida e limita tudo o que recebe.
+- A planilha guarda só o que o jogo pede: nome, turma, avatar e progresso. Como são estudantes menores de idade, combine com a escola o uso dos nomes. Se preferir, oriente a turma a usar só o primeiro nome ou um apelido.
+- Excluir um estudante no painel apaga só aquele computador. Na planilha, apague a linha à mão.

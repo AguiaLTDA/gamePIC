@@ -254,6 +254,7 @@ input[type=range]{width:100%;accent-color:var(--pc,var(--brand))}
 
 /* Professor */
 .teacher{padding-block:24px 56px;display:grid;gap:18px}
+.hub,.phase,.teacher,.about{grid-template-columns:minmax(0,1fr)}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .stat{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:14px}
 .stat b{display:block;font-family:var(--font-display);font-size:2rem;font-weight:400;line-height:1.1}
@@ -279,8 +280,8 @@ textarea{min-height:110px;font-family:var(--font-mono);font-size:.8rem}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;height:100%}
 
 @media (max-width:860px){
-  .login-grid,.hub-grid,.calc,.sim,.two{grid-template-columns:1fr}
-  .learn{grid-template-columns:1fr}
+  .login-grid,.hub-grid,.calc,.sim,.two{grid-template-columns:minmax(0,1fr)}
+  .learn{grid-template-columns:minmax(0,1fr)}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .steps{grid-template-columns:1fr 1fr}
 }
@@ -610,6 +611,58 @@ function unlocked(u, id){ return store.unlockAll || id === 1 || done(u, id - 1);
 function xpOf(u){ if(!u) return 0; let x = 0; Object.values(u.phases || {}).forEach(p => x += p.xp || 0); x += Object.values(u.missions || {}).filter(Boolean).length * 15; return x; }
 function levelOf(xp){ let i = 0; LEVELS.forEach((l, k) => { if(xp >= l[0]) i = k; }); const next = LEVELS[i + 1]; return {i, name:LEVELS[i][1], base:LEVELS[i][0], next: next ? next[0] : null}; }
 function badgesOf(u){ return BADGES.map(b => ({...b, on: !!(u && b.t(u))})); }
+/* ---------- Google Sheets (Apps Script) ---------- */
+// Cole aqui a URL do App da Web do Apps Script (termina em /exec). Vale para todos os computadores.
+const SHEETS_URL_PADRAO = '';
+let flushing = false;
+function sheetsUrl(){ return String(store.sheetsUrl || SHEETS_URL_PADRAO || '').trim(); }
+function cleanUser(u){ return {id:u.id, name:u.name, turma:u.turma, avatar:u.avatar, phases:u.phases || {}, missions:u.missions || {}, seen:u.seen || {}, errors:u.errors || {}, created:u.created || 0, last:u.last || 0}; }
+async function postSheets(body){
+  const url = sheetsUrl(); if(!url) throw new Error('Planilha não configurada.');
+  // sem cabeçalho Content-Type o navegador envia text/plain e o Apps Script aceita sem pré-verificação CORS
+  const r = await fetch(url, {method:'POST', body:JSON.stringify(body), redirect:'follow'});
+  if(!r.ok) throw new Error('A planilha respondeu com erro ' + r.status + '.');
+  return r.json();
+}
+function markDirty(u, fase){
+  if(!u || !sheetsUrl()) return;
+  store.outbox = store.outbox || {};
+  const o = store.outbox[u.id] || (store.outbox[u.id] = {fases:[]});
+  if(fase) o.fases.push(fase);
+  o.v = (o.v || 0) + 1;
+  save(); flushSheets();
+}
+function pendingCount(){ return Object.keys(store.outbox || {}).length; }
+async function flushSheets(){
+  if(flushing || !sheetsUrl() || !pendingCount()) return;
+  flushing = true;
+  try{
+    for(const id of Object.keys(store.outbox)){
+      const u = store.users[id], o = store.outbox[id];
+      if(!u){ delete store.outbox[id]; continue; }
+      const sent = o.fases.length, v = o.v;
+      const j = await postSheets({acao:'salvar', aluno:cleanUser(u), fases:o.fases.slice(0, sent)});
+      if(!j.ok) throw new Error(j.erro || 'erro');
+      o.fases.splice(0, sent);
+      // só sai da fila se nada mudou durante o envio
+      if(o.v === v && store.outbox[id] === o) delete store.outbox[id];
+      save();
+    }
+    store.sheetsOk = Date.now(); store.sheetsErr = null; save();
+    if(pendingCount()) setTimeout(flushSheets, 500);
+  }catch(e){ store.sheetsErr = String(e.message || e); save(); }
+  finally{ flushing = false; updateSheetsStatus(); }
+}
+function updateSheetsStatus(){
+  const el = $('#shStatus'); if(!el) return;
+  const n = pendingCount();
+  el.innerHTML = !sheetsUrl() ? 'Planilha ainda não configurada.' :
+    (n ? `<b>${n}</b> estudante(s) aguardando envio.` : 'Tudo enviado.') +
+    (store.sheetsOk ? ` Último envio: ${new Date(store.sheetsOk).toLocaleString('pt-BR')}.` : '') +
+    (n && store.sheetsErr ? ` <span style="color:var(--bad)">Última falha: ${esc(store.sheetsErr)}</span>` : '');
+}
+window.addEventListener('online', flushSheets);
+
 function starsHTML(n){ let s = ''; for(let i = 0; i < 3; i++) s += i < n ? '★' : '<span class="off">★</span>'; return '<span class="stars" aria-label="' + n + ' de 3 estrelas">' + s + '</span>'; }
 
 /* ---------- estado de navegação ---------- */
@@ -784,6 +837,7 @@ function nextQ(){
   const prev = u.phases[run.pid] || {xp:0, stars:0, best:0, attempts:0};
   u.phases[run.pid] = {xp:Math.max(prev.xp, xp), stars:Math.max(prev.stars, stars), best:Math.max(prev.best || 0, ratio), attempts:(prev.attempts || 0) + 1, last:ratio, at:Date.now()};
   u.last = Date.now(); save();
+  markDirty(u, {fase:run.pid, acerto:ratio, estrelas:stars, tentativa:u.phases[run.pid].attempts});
   const after = xpOf(u);
   run.result = {ratio, stars, gained:after - before, levelUp: levelOf(after).i > lvBefore, newBadges: badgesOf(u).filter(b => b.on && !bBefore.includes(b.n))};
   beep('win'); if(stars >= 2) confetti();
@@ -938,7 +992,7 @@ function initLeito(){
     const key = reg === 'fixo' ? (u > 0.005 ? 'fixo' : null) : reg;
     if(key && !us.missions[key]){
       const bB = badgesOf(us).filter(b => b.on).length;
-      us.missions[key] = true; save(); beep('ok');
+      us.missions[key] = true; save(); markDirty(us); beep('ok');
       const li = document.querySelector('#missions [data-m="' + key + '"]'); if(li){ li.classList.add('done'); li.firstElementChild.textContent = '✓'; }
       toast('Missão cumprida: +15 XP');
       if(badgesOf(us).filter(b => b.on).length > bB){ confetti(); toast('Nova conquista: Exploração do Leito 🧪'); }
@@ -1245,6 +1299,16 @@ function viewTeacher(){
         <div class="row-btns" style="justify-content:flex-start;margin-top:8px"><button class="btn small" data-act="import">Mesclar dados</button><button class="btn ${cf === 'reset' ? 'danger' : 'ghost'} small" data-act="resetall">${cf === 'reset' ? 'Clique de novo para apagar tudo' : 'Apagar todos os dados'}</button></div>
       </section>
     </div>
+    <section class="card"><h3 style="font-size:1.3rem;margin-bottom:6px">Planilha do Google Sheets</h3>
+      <p class="note" style="margin-bottom:12px">Com a planilha ligada, cada computador envia o progresso sozinho ao fim de cada fase. Se a internet cair, o envio fica na fila e sai quando ela voltar. Os estudantes só gravam; para ler a turma inteira é preciso a chave do(a) professor(a).</p>
+      <p id="shStatus" style="font-weight:700;margin-bottom:12px"></p>
+      <form id="shForm" novalidate class="two" style="gap:12px;align-items:end">
+        <div class="field" style="margin:0"><label class="lbl" for="shUrl">URL do App da Web (termina em /exec)</label><input type="text" id="shUrl" value="${esc(sheetsUrl())}" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false"></div>
+        <div class="field" style="margin:0"><label class="lbl" for="shKey">Chave do(a) professor(a)</label><input type="password" id="shKey" value="${esc(store.sheetsKey || '')}" autocomplete="off" placeholder="aparece ao rodar “configurar” no Apps Script"></div>
+        <div class="row-btns" style="justify-content:flex-start;grid-column:1/-1"><button class="btn small" type="submit">Salvar e testar</button><button class="btn ghost small" type="button" data-act="sh-load">Carregar a turma da planilha</button><button class="btn ghost small" type="button" data-act="sh-pushall">Enviar todos deste computador</button></div>
+      </form>
+      ${SHEETS_URL_PADRAO ? '' : '<p class="note" style="margin-top:10px">A URL salva aqui vale só neste navegador. Para os computadores dos estudantes enviarem sozinhos, ela também precisa estar no código do jogo (SHEETS_URL_PADRAO), como explica o README.</p>'}
+    </section>
   </main>`;
 }
 
@@ -1308,7 +1372,7 @@ function afterRender(){
       let u = store.users[id];
       if(!u){ u = store.users[id] = {id, name, turma, avatar:state.avatar, phases:{}, missions:{}, seen:{}, errors:{}, created:Date.now()}; }
       else u.avatar = state.avatar;
-      u.last = Date.now(); store.currentId = id; save();
+      u.last = Date.now(); store.currentId = id; save(); markDirty(u);
       state.screen = 'hub'; render(); window.scrollTo({top:0});
     });
   }
@@ -1324,6 +1388,20 @@ function afterRender(){
   }
   const np = $('#newPin');
   if(np) np.addEventListener('submit', e => { e.preventDefault(); const v = $('#np').value; if(v.length < 4){ toast('A senha precisa de pelo menos 4 caracteres.'); return; } store.pin = v; save(); $('#np').value = ''; toast('Senha do painel atualizada.'); });
+  const sf = $('#shForm');
+  if(sf){
+    updateSheetsStatus();
+    sf.addEventListener('submit', async e => {
+      e.preventDefault();
+      const url = $('#shUrl').value.trim(), key = $('#shKey').value.trim();
+      if(url && !/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec$/.test(url)){ toast('A URL precisa começar com https://script.google.com e terminar em /exec.'); return; }
+      store.sheetsUrl = url === SHEETS_URL_PADRAO ? '' : url; store.sheetsKey = key; save();
+      if(!sheetsUrl()){ updateSheetsStatus(); toast('Planilha desligada neste navegador.'); return; }
+      try{ const j = await postSheets({acao:'testar', chave:key}); toast(j.ok ? (j.chave ? 'Conectado! A chave está certa.' : 'Conectado, mas a chave do(a) professor(a) não confere.') : 'A planilha respondeu: ' + (j.erro || 'erro')); flushSheets(); }
+      catch(err){ toast('Não consegui falar com a planilha. Confira a URL e se a implantação permite “Qualquer pessoa”.'); }
+      updateSheetsStatus();
+    });
+  }
   const tf = $('#tFilter'); if(tf) tf.addEventListener('change', e => { state.turma = e.target.value; render(); });
   const tu = $('#tUnlock'); if(tu) tu.addEventListener('change', e => { store.unlockAll = e.target.checked; save(); toast(store.unlockAll ? 'Todas as fases liberadas.' : 'Fases voltam a abrir em sequência.'); });
   const ts = $('#tSound'); if(ts) ts.addEventListener('change', e => { store.sound = e.target.checked; save(); });
@@ -1349,7 +1427,7 @@ document.addEventListener('click', e => {
     case 'pick-ava':
       state.avatar = arg; document.querySelectorAll('.ava-pick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === arg)); break;
     case 'quick': {
-      const u = store.users[arg]; if(!u) return; u.last = Date.now(); store.currentId = arg; save(); state.screen = 'hub'; render(); window.scrollTo({top:0}); break; }
+      const u = store.users[arg]; if(!u) return; u.last = Date.now(); store.currentId = arg; save(); markDirty(u); state.screen = 'hub'; render(); window.scrollTo({top:0}); break; }
     case 'logout': store.currentId = null; save(); run = null; state.screen = 'login'; render(); break;
     case 'sound': store.sound = !store.sound; save(); render(); break;
     case 'open': {
@@ -1377,7 +1455,7 @@ document.addEventListener('click', e => {
       else state.confirm = 'del:' + arg;
       render(); break;
     case 'resetall':
-      if(state.confirm === 'reset'){ const pin = store.pin; store = freshStore(); store.pin = pin; save(); run = null; state.confirm = null; toast('Todos os dados foram apagados.'); }
+      if(state.confirm === 'reset'){ const keep = {pin:store.pin, sheetsUrl:store.sheetsUrl, sheetsKey:store.sheetsKey}; store = Object.assign(freshStore(), keep); save(); run = null; state.confirm = null; toast('Todos os dados foram apagados.'); }
       else state.confirm = 'reset';
       render(); break;
     case 'copyexp': {
@@ -1388,6 +1466,20 @@ document.addEventListener('click', e => {
     case 'dlexp': {
       try{ const blob = new Blob([$('#exportTxt').value], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'do-lixo-a-luz-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove(); toast('Se o download não começar, use “Copiar dados”.'); }catch(err){ toast('Download indisponível aqui: use “Copiar dados”.'); }
       break; }
+    case 'sh-load': {
+      if(!sheetsUrl()){ toast('Salve a URL da planilha primeiro.'); break; }
+      postSheets({acao:'listar', chave:store.sheetsKey || ''}).then(j => {
+        if(!j.ok){ toast(j.erro === 'chave' ? 'Chave do(a) professor(a) incorreta.' : 'A planilha respondeu: ' + j.erro); return; }
+        const map = {}; (j.alunos || []).forEach(a => { if(a && a.id) map[a.id] = a; });
+        const n = mergeUsers(map); save(); render(); toast(n + ' estudante(s) carregado(s) da planilha.');
+      }).catch(() => toast('Não consegui falar com a planilha. Confira a internet e a URL.'));
+      break; }
+    case 'sh-pushall': {
+      if(!sheetsUrl()){ toast('Salve a URL da planilha primeiro.'); break; }
+      const us = Object.values(store.users);
+      us.forEach(u => { store.outbox = store.outbox || {}; const o = store.outbox[u.id] || (store.outbox[u.id] = {fases:[]}); o.v = (o.v || 0) + 1; });
+      save(); updateSheetsStatus(); flushSheets(); toast(us.length + ' estudante(s) na fila de envio.');
+      break; }
     case 'import': {
       try{ const data = JSON.parse($('#importTxt').value); if(!data || data.app !== 'dolixoaluz') throw new Error('x'); const n = mergeUsers(data.users); save(); render(); toast(n + ' estudante(s) mesclado(s).'); }
       catch(err){ toast('Não reconheci esses dados. Cole o texto completo copiado do painel de outro computador.'); }
@@ -1396,5 +1488,6 @@ document.addEventListener('click', e => {
 });
 
 render();
+flushSheets();
 })();
 </script>
