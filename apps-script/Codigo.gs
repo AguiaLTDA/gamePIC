@@ -16,8 +16,9 @@
 
 const ABA_ALUNOS = 'Alunos';
 const ABA_FASES = 'Fases concluídas';
-const CAB_ALUNOS = ['ID', 'Nome', 'Turma', 'Avatar', 'XP', 'Nível', 'F1 %', 'F2 %', 'F3 %', 'F4 %', 'F5 %', 'F6 %', 'Estrelas', 'Missões', 'Último acesso', 'Dados do jogo (não editar)'];
-const CAB_FASES = ['Data e hora', 'ID', 'Nome', 'Turma', 'Fase', 'Acerto %', 'Estrelas', 'Tentativa'];
+const VERSAO = 2;
+const CAB_ALUNOS = ['ID', 'Nome', 'Telefone', 'Turma', 'Escola', 'Avatar', 'XP', 'Nível', 'F1 %', 'F2 %', 'F3 %', 'F4 %', 'F5 %', 'F6 %', 'Estrelas', 'Missões', 'Último acesso', 'Dados do jogo (não editar)'];
+const CAB_FASES = ['Data e hora', 'ID', 'Nome', 'Turma', 'Escola', 'Fase', 'Acerto %', 'Estrelas', 'Tentativa'];
 const NOMES_FASES = ['', 'Conhecer os resíduos', 'Destinação correta', 'Potencial energético', 'Rotas de conversão', 'Combustíveis e produtos', 'Leito fluidizado e CFD'];
 const NIVEIS = [[0, 'Aprendiz da Reciclagem'], [120, 'Separador(a) Expert'], [300, 'Caçador(a) de Energia'], [500, 'Engenheiro(a) de Conversão'], [700, 'Mestre do Leito Fluidizado'], [880, 'Cientista Do Lixo à Luz']];
 
@@ -37,7 +38,7 @@ function configurar() {
 }
 
 function doGet() {
-  return resposta_({ ok: true, app: 'dolixoaluz' });
+  return resposta_({ ok: true, app: 'dolixoaluz', versao: VERSAO });
 }
 
 function doPost(e) {
@@ -62,7 +63,7 @@ function doPost(e) {
       return resposta_({ ok: true, alunos: listarAlunos_() });
     }
     if (corpo.acao === 'testar') {
-      return resposta_({ ok: true, chave: chaveOk_(corpo.chave) });
+      return resposta_({ ok: true, chave: chaveOk_(corpo.chave), versao: VERSAO });
     }
     return resposta_({ ok: false, erro: 'Ação desconhecida.' });
   } catch (err) {
@@ -94,7 +95,8 @@ function salvarAluno_(a) {
   NIVEIS.forEach(function (n) { if (xp >= n[0]) nivel = n[1]; });
   const pct = [1, 2, 3, 4, 5, 6].map(function (f) { const p = a.phases[f]; return p ? Math.round(p.best * 100) : ''; });
   const estrelas = Object.keys(a.phases).reduce(function (s, k) { return s + a.phases[k].stars; }, 0);
-  const linha = [a.id, texto_(a.name), texto_(a.turma), a.avatar, xp, nivel].concat(pct, [estrelas, missoes + '/3', a.last ? new Date(a.last) : '', JSON.stringify(a)]);
+  // o apóstrofo guarda o telefone como texto, senão a planilha pode tentar ler como número
+  const linha = [a.id, texto_(a.name), a.telefone ? "'" + a.telefone : '', texto_(a.turma), texto_(a.escola), a.avatar, xp, nivel].concat(pct, [estrelas, missoes + '/3', a.last ? new Date(a.last) : '', JSON.stringify(a)]);
   if (alvo) aba.getRange(alvo, 1, 1, linha.length).setValues([linha]);
   else aba.appendRow(linha);
 }
@@ -111,6 +113,8 @@ function unirAluno_(novo, antigo) {
   ['seen', 'errors'].forEach(function (c) {
     Object.keys(antigo[c]).forEach(function (k) { novo[c][k] = Math.max(antigo[c][k], novo[c][k] || 0); });
   });
+  if (!novo.telefone) novo.telefone = antigo.telefone;
+  if (!novo.escola) novo.escola = antigo.escola;
   novo.created = Math.min(novo.created || antigo.created, antigo.created || novo.created);
   novo.last = Math.max(novo.last, antigo.last);
 }
@@ -120,7 +124,7 @@ function registrarFase_(a, f) {
   const fase = parseInt(f.fase, 10);
   if (!(fase >= 1 && fase <= 6)) return;
   const aba = prepararAba_(SpreadsheetApp.getActiveSpreadsheet(), ABA_FASES, CAB_FASES);
-  aba.appendRow([new Date(), a.id, texto_(a.name), texto_(a.turma), fase + ' · ' + NOMES_FASES[fase], Math.round(num_(f.acerto, 0, 1) * 100), num_(f.estrelas, 0, 3), num_(f.tentativa, 0, 9999)]);
+  aba.appendRow([new Date(), a.id, texto_(a.name), texto_(a.turma), texto_(a.escola), fase + ' · ' + NOMES_FASES[fase], Math.round(num_(f.acerto, 0, 1) * 100), num_(f.estrelas, 0, 3), num_(f.tentativa, 0, 9999)]);
 }
 
 /* ---------- leitura ---------- */
@@ -136,9 +140,9 @@ function listarAlunos_() {
 /* ---------- validação ---------- */
 
 function limparAluno_(x) {
-  if (!x || typeof x.id !== 'string' || !x.id || x.id.length > 90 || !x.name) return null;
+  if (!x || typeof x.id !== 'string' || !x.id || x.id.length > 160 || !x.name) return null;
   const a = {
-    id: x.id, name: String(x.name).slice(0, 40), turma: String(x.turma || '').slice(0, 24), avatar: String(x.avatar || '').slice(0, 16),
+    id: x.id, name: String(x.name).slice(0, 40), telefone: telefone_(x.telefone), turma: String(x.turma || '').slice(0, 24), escola: String(x.escola || '').slice(0, 60), avatar: String(x.avatar || '').slice(0, 16),
     phases: {}, missions: {}, seen: {}, errors: {}, created: num_(x.created, 0, 4e12), last: num_(x.last, 0, 4e12)
   };
   [1, 2, 3, 4, 5, 6].forEach(function (f) {
@@ -153,6 +157,14 @@ function limparAluno_(x) {
     });
   });
   return a;
+}
+
+// aceita só telefones brasileiros com DDD (10 ou 11 dígitos) e devolve no formato (27) 99999-9999
+function telefone_(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  if (d.length < 10 || d.length > 11) return '';
+  const r = d.slice(2), corte = r.length - 4;
+  return '(' + d.slice(0, 2) + ') ' + r.slice(0, corte) + '-' + r.slice(corte);
 }
 
 function num_(v, min, max) {
@@ -178,8 +190,28 @@ function prepararAba_(ss, nome, cab) {
     aba.appendRow(cab);
     aba.getRange(1, 1, 1, cab.length).setFontWeight('bold').setBackground('#0A9A68').setFontColor('#FFFFFF');
     aba.setFrozenRows(1);
+  } else {
+    atualizarColunas_(aba, cab);
   }
   return aba;
+}
+
+/**
+ * Planilhas criadas pela versão anterior não têm as colunas novas (Telefone, Escola).
+ * Insere cada coluna que falta no lugar certo, sem mexer nos dados que já existem.
+ */
+function atualizarColunas_(aba, cab) {
+  const largura = Math.max(aba.getLastColumn(), 1);
+  const atual = aba.getRange(1, 1, 1, largura).getValues()[0].map(String);
+  if (atual.length >= cab.length && cab.every(function (c, i) { return atual[i] === c; })) return;
+  for (let i = 0; i < cab.length; i++) {
+    if (atual[i] === cab[i]) continue;
+    if (atual.indexOf(cab[i]) === -1) {
+      aba.insertColumnBefore(i + 1);
+      atual.splice(i, 0, cab[i]);
+      aba.getRange(1, i + 1).setValue(cab[i]).setFontWeight('bold').setBackground('#0A9A68').setFontColor('#FFFFFF');
+    }
+  }
 }
 
 function resposta_(obj) {

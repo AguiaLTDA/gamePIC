@@ -70,8 +70,10 @@ git add . && git commit -m "Atualiza o jogo" && git push
 Com a planilha ligada, cada computador envia o progresso sozinho: ao entrar, ao terminar cada fase e ao cumprir cada missão do simulador. Se a internet cair, o envio fica numa fila e sai quando ela voltar.
 
 A planilha ganha duas abas:
-- **Alunos:** uma linha por estudante, com nome, turma, XP, nível, acerto de cada fase, estrelas, missões e último acesso.
-- **Fases concluídas:** uma linha cada vez que alguém termina uma fase, com data, fase, acerto e estrelas.
+- **Alunos:** uma linha por estudante, com nome, telefone, turma, escola, XP, nível, acerto de cada fase, estrelas, missões e último acesso.
+- **Fases concluídas:** uma linha cada vez que alguém termina uma fase, com data, escola, fase, acerto e estrelas.
+
+Uma planilha criada com a versão anterior do script ganha as colunas Telefone e Escola sozinha no primeiro envio depois da atualização. Os dados que já existem não são alterados.
 
 ### 1. Criar a planilha e o script
 
@@ -107,5 +109,6 @@ Para testar sem mexer no código, cole a URL direto no painel. Nesse caso ela va
 
 - A planilha fica na conta Google de quem a criou e não é pública. Ninguém a vê sem que você compartilhe.
 - A URL do script fica visível no código do site. Quem tiver a URL consegue **gravar** registros, mas **não consegue ler** nada sem a chave do(a) professor(a). O script também valida e limita tudo o que recebe.
-- A planilha guarda só o que o jogo pede: nome, turma, avatar e progresso. Como são estudantes menores de idade, combine com a escola o uso dos nomes. Se preferir, oriente a turma a usar só o primeiro nome ou um apelido.
+- A planilha guarda só o que o jogo pede: nome, telefone, turma, escola, avatar e progresso. Telefone e nome de estudantes menores de idade são dados pessoais protegidos pela LGPD: combine o uso com a escola, peça a autorização dos responsáveis e não compartilhe a planilha fora da equipe. A tela de cadastro avisa que menores podem informar o telefone do(a) responsável.
+- O telefone também fica salvo no navegador do computador onde o estudante se cadastrou. Ele aparece só no painel do(a) professor(a), protegido por senha, e nunca na tela inicial.
 - Excluir um estudante no painel apaga só aquele computador. Na planilha, apague a linha à mão.

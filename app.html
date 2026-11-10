@@ -91,7 +91,7 @@ button{font:inherit;color:inherit}
 .lead{font-size:1.15rem;max-width:34ch;margin-top:16px;color:var(--muted)}
 form .field{display:grid;gap:6px;margin-bottom:14px}
 label.lbl{font-weight:800;font-size:.92rem}
-input[type=text],input[type=password],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:.7em .9em;width:100%}
+input[type=text],input[type=tel],input[type=password],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:.7em .9em;width:100%}
 input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:none}
 .ava-pick{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .ava-pick button{aspect-ratio:1;max-width:100%;border-radius:12px;border:2px solid var(--line);background:var(--bg);font-size:1.5rem;cursor:pointer;display:grid;place-items:center}
@@ -350,6 +350,8 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 const fmt = (n, d) => Number(n).toLocaleString('pt-BR', {maximumFractionDigits: d == null ? 1 : d, minimumFractionDigits: 0});
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const phoneDigits = s => String(s || '').replace(/\D/g, '').slice(0, 11);
+const fmtPhone = s => { const d = phoneDigits(s); if(d.length < 3) return d; const r = d.slice(2), cut = r.length > 8 ? 5 : 4; return '(' + d.slice(0, 2) + ') ' + (r.length > cut ? r.slice(0, cut) + '-' + r.slice(cut) : r); };
 const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -631,7 +633,7 @@ function badgesOf(u){ return BADGES.map(b => ({...b, on: !!(u && b.t(u))})); }
 const SHEETS_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbxSvoyIGJVZ9JexVcOHrL7qkFLl5BvpC_jkqkdx70ojbV2nnliuHJsE0TK_uXq31ppEfQ/exec';
 let flushing = false;
 function sheetsUrl(){ return String(store.sheetsUrl || SHEETS_URL_PADRAO || '').trim(); }
-function cleanUser(u){ return {id:u.id, name:u.name, turma:u.turma, avatar:u.avatar, phases:u.phases || {}, missions:u.missions || {}, seen:u.seen || {}, errors:u.errors || {}, created:u.created || 0, last:u.last || 0}; }
+function cleanUser(u){ return {id:u.id, name:u.name, telefone:u.telefone || '', turma:u.turma, escola:u.escola || '', avatar:u.avatar, phases:u.phases || {}, missions:u.missions || {}, seen:u.seen || {}, errors:u.errors || {}, created:u.created || 0, last:u.last || 0}; }
 async function postSheets(body){
   const url = sheetsUrl(); if(!url) throw new Error('Planilha não configurada.');
   // sem cabeçalho Content-Type o navegador envia text/plain e o Apps Script aceita sem pré-verificação CORS
@@ -731,6 +733,9 @@ function viewTop(){
 
 function viewLogin(){
   const users = Object.values(store.users).sort((a, b) => (b.last || 0) - (a.last || 0)).slice(0, 8);
+  // num computador da escola, a próxima pessoa quase sempre é da mesma escola
+  const lastEscola = (users.find(u => u.escola) || {}).escola || '';
+  const escolas = [...new Set(['EEEFM Marita Motta Santos'].concat(Object.values(store.users).map(u => u.escola).filter(Boolean)))];
   return `<main class="login wrap"><div class="login-grid">
     <section>
       <p class="eyebrow">PIC-Jr 2026 · resíduos sólidos + energia + CFD</p>
@@ -742,7 +747,9 @@ function viewLogin(){
       <div class="watt" style="margin-bottom:16px">${WATT}<p class="bubble">Oi! Eu sou o Watt. Diga seu nome e escolha seu avatar de cientista ou astronauta para começar a jornada.</p></div>
       <form id="loginForm" autocomplete="off" novalidate>
         <div class="field"><label class="lbl" for="lgName">Seu nome</label><input type="text" id="lgName" maxlength="40" placeholder="Ex.: Ana Souza" required></div>
+        <div class="field"><label class="lbl" for="lgTel">Telefone (WhatsApp)</label><input type="tel" id="lgTel" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="(27) 99999-9999" required><small class="note">Só a equipe do projeto vê, para contato. Quem for menor de idade pode informar o telefone do(a) responsável.</small></div>
         <div class="field"><label class="lbl" for="lgTurma">Turma</label><input type="text" id="lgTurma" maxlength="24" placeholder="Ex.: 1º ano A" required></div>
+        <div class="field"><label class="lbl" for="lgEscola">Escola</label><input type="text" id="lgEscola" maxlength="60" list="escolas" placeholder="Ex.: EEEFM Marita Motta Santos" value="${esc(lastEscola)}" required><datalist id="escolas">${escolas.map(s => `<option value="${esc(s)}"></option>`).join('')}</datalist></div>
         <div class="field"><span class="lbl" id="avaLbl">Avatar</span><div class="ava-pick" role="group" aria-labelledby="avaLbl">${AVATARS.map((a, i) => `<button type="button" data-act="pick-ava" data-arg="${a}" aria-pressed="${a === state.avatar}" title="${AVATAR_NAMES[i]}" aria-label="${AVATAR_NAMES[i]} ${i + 1}">${a}</button>`).join('')}</div></div>
         <p class="err" id="lgErr"></p>
         <button class="btn" type="submit" style="width:100%">Começar a jornada</button>
@@ -763,7 +770,7 @@ function viewHub(){
     <section class="card hello">
       <span class="ava big">${u.avatar}</span>
       <div style="min-width:0">
-        <p class="eyebrow">${esc(u.turma)} · Nível ${lv.i + 1}</p>
+        <p class="eyebrow">${esc(u.turma)}${u.escola ? ' · ' + esc(u.escola) : ''} · Nível ${lv.i + 1}</p>
         <h1 style="font-size:clamp(1.6rem,4vw,2.2rem)">Olá, ${esc(u.name.split(' ')[0])}!</h1>
         <p style="font-weight:800">${lv.name} <span class="muted mono">· ${xp} XP${lv.next ? ' / ' + lv.next : ''}</span></p>
         <div class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${pct}%"></i></div>
@@ -1305,8 +1312,8 @@ function viewTeacher(){
       <div class="stat"><b>${complete}</b><span>jornadas completas</span></div>
     </div>
     <section class="card"><h3 style="font-size:1.3rem;margin-bottom:8px">Estudantes</h3>
-      ${us.length ? `<div class="tbl-wrap"><table><thead><tr><th>Estudante</th><th>Turma</th><th>Nível</th><th>XP</th>${PHASES.map(p => `<th title="${p.title}">F${p.id}</th>`).join('')}<th>Missões</th><th>Último acesso</th><th></th></tr></thead><tbody>
-      ${us.map(u => `<tr><td style="white-space:nowrap"><span class="ava" style="display:inline-grid;width:26px;height:26px;font-size:.9rem;vertical-align:middle">${u.avatar}</span> <b>${esc(u.name)}</b></td><td>${esc(u.turma)}</td><td>${levelOf(xpOf(u)).i + 1}</td><td class="mono">${xpOf(u)}</td>${PHASES.map(p => { const x = u.phases[p.id]; return `<td class="mono" title="${x ? Math.round(x.best * 100) + '% · ' + x.attempts + ' tentativa(s)' : ''}">${x ? Math.round(x.best * 100) + '%' : '–'}</td>`; }).join('')}<td class="mono">${Object.values(u.missions || {}).filter(Boolean).length}/3</td><td class="muted" style="white-space:nowrap">${u.last ? new Date(u.last).toLocaleDateString('pt-BR') : '–'}</td><td><button class="btn ${cf === 'del:' + u.id ? 'danger' : 'ghost'} small" data-act="deluser" data-arg="${esc(u.id)}">${cf === 'del:' + u.id ? 'Confirmar' : 'Excluir'}</button></td></tr>`).join('')}
+      ${us.length ? `<div class="tbl-wrap"><table><thead><tr><th>Estudante</th><th>Telefone</th><th>Turma</th><th>Escola</th><th>Nível</th><th>XP</th>${PHASES.map(p => `<th title="${p.title}">F${p.id}</th>`).join('')}<th>Missões</th><th>Último acesso</th><th></th></tr></thead><tbody>
+      ${us.map(u => `<tr><td style="white-space:nowrap"><span class="ava" style="display:inline-grid;width:26px;height:26px;font-size:.9rem;vertical-align:middle">${u.avatar}</span> <b>${esc(u.name)}</b></td><td class="mono" style="white-space:nowrap">${esc(u.telefone || '–')}</td><td>${esc(u.turma)}</td><td>${esc(u.escola || '–')}</td><td>${levelOf(xpOf(u)).i + 1}</td><td class="mono">${xpOf(u)}</td>${PHASES.map(p => { const x = u.phases[p.id]; return `<td class="mono" title="${x ? Math.round(x.best * 100) + '% · ' + x.attempts + ' tentativa(s)' : ''}">${x ? Math.round(x.best * 100) + '%' : '–'}</td>`; }).join('')}<td class="mono">${Object.values(u.missions || {}).filter(Boolean).length}/3</td><td class="muted" style="white-space:nowrap">${u.last ? new Date(u.last).toLocaleDateString('pt-BR') : '–'}</td><td><button class="btn ${cf === 'del:' + u.id ? 'danger' : 'ghost'} small" data-act="deluser" data-arg="${esc(u.id)}">${cf === 'del:' + u.id ? 'Confirmar' : 'Excluir'}</button></td></tr>`).join('')}
       </tbody></table></div>` : '<p class="muted">Nenhum estudante ainda. Peça para a turma entrar pela tela inicial neste computador, ou importe os dados de outros computadores abaixo.</p>'}
     </section>
     <div class="two">
@@ -1349,7 +1356,8 @@ function mergeUsers(inc){
   Object.values(inc || {}).forEach(x => {
     if(!x || !x.id || !x.name) return;
     const y = store.users[x.id];
-    if(!y){ store.users[x.id] = {id:x.id, name:String(x.name).slice(0, 40), turma:String(x.turma || '').slice(0, 24), avatar:AVATARS.includes(x.avatar) ? x.avatar : AVATARS[0], phases:x.phases || {}, missions:x.missions || {}, seen:x.seen || {}, errors:x.errors || {}, created:x.created || Date.now(), last:x.last || 0}; n++; return; }
+    if(y && (x.last || 0) >= (y.last || 0)){ if(x.telefone) y.telefone = fmtPhone(x.telefone); if(x.escola) y.escola = String(x.escola).slice(0, 60); }
+    if(!y){ store.users[x.id] = {id:x.id, name:String(x.name).slice(0, 40), telefone:x.telefone ? fmtPhone(x.telefone) : '', turma:String(x.turma || '').slice(0, 24), escola:String(x.escola || '').slice(0, 60), avatar:AVATARS.includes(x.avatar) ? x.avatar : AVATARS[0], phases:x.phases || {}, missions:x.missions || {}, seen:x.seen || {}, errors:x.errors || {}, created:x.created || Date.now(), last:x.last || 0}; n++; return; }
     Object.entries(x.phases || {}).forEach(([k, p]) => { const q = y.phases[k]; if(!q || (p.xp || 0) > (q.xp || 0) || (p.best || 0) > (q.best || 0)) y.phases[k] = {xp:Math.max(p.xp || 0, q ? q.xp : 0), stars:Math.max(p.stars || 0, q ? q.stars : 0), best:Math.max(p.best || 0, q ? q.best : 0), attempts:Math.max(p.attempts || 0, q ? q.attempts : 0), last:p.last, at:p.at}; });
     y.missions = y.missions || {}; Object.entries(x.missions || {}).forEach(([k, v]) => { if(v) y.missions[k] = true; });
     ['seen', 'errors'].forEach(f => { y[f] = y[f] || {}; Object.entries(x[f] || {}).forEach(([k, v]) => y[f][k] = Math.max(y[f][k] || 0, v)); });
@@ -1388,7 +1396,7 @@ function viewCert(){
     <h1>Do Lixo à Luz</h1>
     <p>Certificamos que</p>
     <p class="who">${u.avatar} ${esc(u.name)}</p>
-    <p>da turma <b>${esc(u.turma)}</b> completou a jornada sobre resíduos sólidos, conversão energética e fluidodinâmica computacional, com <b>${xp} XP</b> e <b>${stars} de 18 estrelas</b>, alcançando o nível <b>${levelOf(xp).name}</b>.</p>
+    <p>da turma <b>${esc(u.turma)}</b>${u.escola ? ` da escola <b>${esc(u.escola)}</b>,` : ''} completou a jornada sobre resíduos sólidos, conversão energética e fluidodinâmica computacional, com <b>${xp} XP</b> e <b>${stars} de 18 estrelas</b>, alcançando o nível <b>${levelOf(xp).name}</b>.</p>
     <p class="muted" style="font-size:.9rem">Projeto PICJr 2026 · UNIVC · São Mateus (ES) · ${new Date().toLocaleDateString('pt-BR')}</p>
     <p class="note">Tire um print desta tela para guardar.</p>
     <button class="btn ghost" data-act="go" data-arg="hub">Voltar ao mapa</button>
@@ -1399,15 +1407,29 @@ function viewCert(){
 function afterRender(){
   const lf = $('#loginForm');
   if(lf){
+    $('#lgTel').addEventListener('input', e => { e.target.value = fmtPhone(e.target.value); });
     lf.addEventListener('submit', e => {
       e.preventDefault();
-      const name = $('#lgName').value.trim().replace(/\s+/g, ' '), turma = $('#lgTurma').value.trim().replace(/\s+/g, ' ');
-      if(name.length < 2){ $('#lgErr').textContent = 'Escreva seu nome (pelo menos 2 letras).'; $('#lgName').focus(); return; }
-      if(!turma){ $('#lgErr').textContent = 'Escreva sua turma, por exemplo “1º ano A”.'; $('#lgTurma').focus(); return; }
-      const id = slug(name) + '|' + slug(turma);
+      const clean = s => s.trim().replace(/\s+/g, ' ');
+      const name = clean($('#lgName').value), turma = clean($('#lgTurma').value), escola = clean($('#lgEscola').value), tel = phoneDigits($('#lgTel').value);
+      const fail = (msg, el) => { $('#lgErr').textContent = msg; $(el).focus(); };
+      if(name.length < 2) return fail('Escreva seu nome (pelo menos 2 letras).', '#lgName');
+      if(tel.length < 10) return fail('Escreva o telefone com DDD, por exemplo (27) 99999-9999.', '#lgTel');
+      if(!turma) return fail('Escreva sua turma, por exemplo “1º ano A”.', '#lgTurma');
+      if(escola.length < 3) return fail('Escreva o nome da sua escola.', '#lgEscola');
+      const id = slug(name) + '|' + slug(turma) + '|' + slug(escola);
       let u = store.users[id];
-      if(!u){ u = store.users[id] = {id, name, turma, avatar:state.avatar, phases:{}, missions:{}, seen:{}, errors:{}, created:Date.now()}; }
-      else u.avatar = state.avatar;
+      // cadastros antigos (só nome + turma) passam para o novo formato sem perder o progresso
+      const picked = store.users[state.completing];
+      const legacy = !u && ((picked && picked.id !== id && slug(picked.name) === slug(name) && picked) || store.users[slug(name) + '|' + slug(turma)]);
+      state.completing = null;
+      if(legacy){
+        delete store.users[legacy.id];
+        if(store.outbox && store.outbox[legacy.id]){ store.outbox[id] = store.outbox[legacy.id]; delete store.outbox[legacy.id]; }
+        legacy.id = id; u = store.users[id] = legacy;
+      }
+      if(!u) u = store.users[id] = {id, name, turma, phases:{}, missions:{}, seen:{}, errors:{}, created:Date.now()};
+      Object.assign(u, {avatar:state.avatar, telefone:fmtPhone(tel), escola});
       u.last = Date.now(); store.currentId = id; save(); markDirty(u);
       state.screen = 'hub'; render(); window.scrollTo({top:0});
     });
@@ -1462,7 +1484,17 @@ document.addEventListener('click', e => {
     case 'pick-ava':
       state.avatar = arg; document.querySelectorAll('.ava-pick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === arg)); break;
     case 'quick': {
-      const u = store.users[arg]; if(!u) return; u.last = Date.now(); store.currentId = arg; save(); markDirty(u); state.screen = 'hub'; render(); window.scrollTo({top:0}); break; }
+      const u = store.users[arg]; if(!u) return;
+      if(!u.telefone || !u.escola){
+        // cadastro antigo: preenche o que já sabemos e pede o resto (o telefone nunca é preenchido por outra pessoa)
+        $('#lgName').value = u.name; $('#lgTurma').value = u.turma; $('#lgEscola').value = u.escola || $('#lgEscola').value;
+        state.avatar = u.avatar; document.querySelectorAll('.ava-pick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === u.avatar));
+        state.completing = u.id;
+        $('#lgErr').textContent = 'Complete seu cadastro com telefone e escola para continuar.';
+        $(u.telefone ? '#lgEscola' : '#lgTel').focus();
+        break;
+      }
+      u.last = Date.now(); store.currentId = arg; save(); markDirty(u); state.screen = 'hub'; render(); window.scrollTo({top:0}); break; }
     case 'logout': store.currentId = null; save(); run = null; state.screen = 'login'; render(); break;
     case 'sound': store.sound = !store.sound; save(); render(); break;
     case 'open': {
