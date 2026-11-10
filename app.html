@@ -111,9 +111,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:none}
 .trail::before{content:"";position:absolute;left:35px;top:30px;bottom:30px;border-left:4px dashed var(--line)}
 .stop{position:relative;display:grid;grid-template-columns:74px 1fr;gap:16px;align-items:center}
 .stop .num{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-display);font-size:2rem;color:#fff;background:var(--pc);box-shadow:0 5px 0 color-mix(in srgb,var(--pc) 65%,#000);position:relative;z-index:1}
-.stop.locked .num{background:var(--surface-2);color:var(--muted);box-shadow:0 5px 0 var(--line)}
 .stop .card{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:16px 18px}
-.stop.locked .card{opacity:.7}
+.phase-nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:2px solid var(--line);padding-top:16px}
+.phase-nav .btn{max-width:100%;white-space:normal;text-align:left}
+.phase-nav .next{margin-left:auto;text-align:right}
 .stop h3{font-size:1.35rem}
 .stars{color:var(--sun-deep);letter-spacing:2px;font-size:1.1rem;white-space:nowrap}
 .stars .off{color:var(--line)}
@@ -335,7 +336,7 @@ textarea{min-height:110px;font-family:var(--font-mono);font-size:.8rem}
 /* ---------- armazenamento ---------- */
 const KEY = 'dolixoaluz.v1';
 let memStore = null;
-function freshStore(){ return {v:1, users:{}, currentId:null, pin:null, unlockAll:false, sound:true}; }
+function freshStore(){ return {v:1, users:{}, currentId:null, pin:null, sound:true}; }
 function loadStore(){
   try{ const r = localStorage.getItem(KEY); if(r){ const s = JSON.parse(r); if(s && s.users) return Object.assign(freshStore(), s); } }catch(e){}
   return memStore || freshStore();
@@ -622,7 +623,6 @@ const BADGES = [
 ];
 function cur(){ return store.users[store.currentId] || null; }
 function done(u, id){ return !!(u && u.phases && u.phases[id] && u.phases[id].stars); }
-function unlocked(u, id){ return store.unlockAll || id === 1 || done(u, id - 1); }
 function xpOf(u){ if(!u) return 0; let x = 0; Object.values(u.phases || {}).forEach(p => x += p.xp || 0); x += Object.values(u.missions || {}).filter(Boolean).length * 15; return x; }
 function levelOf(xp){ let i = 0; LEVELS.forEach((l, k) => { if(xp >= l[0]) i = k; }); const next = LEVELS[i + 1]; return {i, name:LEVELS[i][1], base:LEVELS[i][0], next: next ? next[0] : null}; }
 function badgesOf(u){ return BADGES.map(b => ({...b, on: !!(u && b.t(u))})); }
@@ -773,12 +773,13 @@ function viewHub(){
     <div class="hub-grid">
       <section aria-label="Trilha de fases">
         <div class="watt" style="margin-bottom:18px">${WATT}<p class="bubble">${allDone ? 'Você completou a trilha inteira! Que tal apresentar o simulador de leito fluidizado na feira de ciências?' : esc(nextPhase.tip)}</p></div>
+        <p class="note" style="margin-bottom:12px">Todas as fases estão abertas. A ordem da trilha é só uma sugestão: comece pela que quiser e pule as que preferir.</p>
         <div class="trail">${PHASES.map(p => {
-          const lock = !unlocked(u, p.id); const pr = u.phases[p.id];
-          return `<div class="stop ${lock ? 'locked' : ''}" style="--pc:${p.pc}">
-            <div class="num">${lock ? '🔒' : p.id}</div>
+          const pr = u.phases[p.id];
+          return `<div class="stop" style="--pc:${p.pc}">
+            <div class="num">${p.id}</div>
             <div class="card"><div style="min-width:0"><h3>${p.title}</h3><p class="muted" style="font-weight:700">${p.tag}</p>${pr ? `<p style="margin-top:4px">${starsHTML(pr.stars)} <span class="muted mono" style="font-size:.85rem">${Math.round(pr.best * 100)}% · ${pr.xp} XP</span></p>` : ''}</div>
-            ${lock ? `<span class="muted" style="font-weight:800;font-size:.85rem">Conclua a fase ${p.id - 1}</span>` : `<button class="btn ${pr ? 'ghost' : ''} small" data-act="open" data-arg="${p.id}">${pr ? 'Rever' : 'Jogar'}</button>`}</div>
+            <button class="btn ${pr ? 'ghost' : ''} small" data-act="open" data-arg="${p.id}">${pr ? 'Rever' : 'Abrir'}</button></div>
           </div>`; }).join('')}</div>
       </section>
       <aside class="side">
@@ -799,10 +800,15 @@ function viewPhase(){
   else if(state.tab === 'leito') body = viewLeito();
   else if(state.tab === 'cfd') body = viewCFD();
   const pr = u.phases[p.id];
+  const prev = PHASES[p.id - 2], next = PHASES[p.id];
   return `<main class="phase wrap" style="--pc:${p.pc}">
     <div class="phase-head"><button class="btn ghost small" data-act="go" data-arg="hub" aria-label="Voltar ao mapa">← Mapa</button><span class="num">${p.id}</span><div style="min-width:0"><p class="eyebrow">Fase ${p.id} de 6</p><h1>${p.title}</h1></div>${pr ? `<span style="margin-left:auto">${starsHTML(pr.stars)}</span>` : ''}</div>
     <div class="tabs" role="tablist">${tabs.map(t => `<button role="tab" aria-selected="${state.tab === t.id}" data-act="tab" data-arg="${t.id}">${t.label}</button>`).join('')}</div>
     ${body}
+    <nav class="phase-nav" aria-label="Outras fases">
+      ${prev ? `<button class="btn ghost small" data-act="open" data-arg="${prev.id}">← Fase ${prev.id}: ${prev.title}</button>` : ''}
+      ${next ? `<button class="btn ghost small next" data-act="open" data-arg="${next.id}">${pr ? 'Ir para a' : 'Pular para a'} fase ${next.id}: ${next.title} →</button>` : ''}
+    </nav>
   </main>`;
 }
 
@@ -1313,8 +1319,6 @@ function viewTeacher(){
     </div>
     <div class="two">
       <section class="card"><h3 style="font-size:1.3rem;margin-bottom:10px">Configurações</h3>
-        <label class="switch"><input type="checkbox" id="tUnlock" ${store.unlockAll ? 'checked' : ''}> Modo apresentação: liberar todas as fases</label>
-        <p class="note" style="margin:4px 0 12px 30px">Útil em feiras e aulas expositivas, para ir direto ao simulador.</p>
         <label class="switch"><input type="checkbox" id="tSound" ${store.sound ? 'checked' : ''}> Efeitos sonoros</label>
         <form id="newPin" style="margin-top:16px" novalidate><div class="field"><label class="lbl" for="np">Trocar a senha do painel</label><input type="password" id="np" autocomplete="off" placeholder="Nova senha"></div><button class="btn ghost small" type="submit">Salvar nova senha</button></form>
       </section>
@@ -1368,7 +1372,7 @@ function viewAbout(){
     </div>
     <div class="two">
       <section class="card"><h3>Como o jogo conversa com o projeto</h3><ul><li><b>Fases 1 e 2:</b> reconhecer os resíduos e pensar na destinação certa, antes de falar em energia.</li><li><b>Fase 3:</b> comparar o potencial energético dos materiais e estimar o que a escola descarta.</li><li><b>Fases 4 e 5:</b> analisar as diferentes rotas de conversão e os produtos de cada uma.</li><li><b>Fase 6:</b> conhecer, de forma introdutória, o leito fluidizado e a simulação computacional, como um dos caminhos possíveis.</li><li>O jogo inteiro serve como material de divulgação científica para aulas, feiras e eventos.</li></ul></section>
-      <section class="card"><h3>Roteiro de 5 minutos para a feira</h3><ol><li>Comece pelo consumo: pergunte ao visitante quantas caixinhas de leite ou suco a família usa por semana e para onde elas vão.</li><li>Jogue a fase 2 com o visitante e mostre que reciclar vem antes de gerar energia.</li><li>Use a calculadora da fase 3 para estimar o que a escola descarta e o que daria para aproveitar.</li><li>Na fase 4, compare duas rotas para o mesmo resíduo e discuta qual faz mais sentido e por quê.</li><li>Termine com o simulador de leito, como exemplo de tecnologia estudada pelo projeto.</li></ol><p class="note" style="margin-top:8px">Dica: no painel do(a) professor(a), ligue o “Modo apresentação” para liberar todas as fases.</p></section>
+      <section class="card"><h3>Roteiro de 5 minutos para a feira</h3><ol><li>Comece pelo consumo: pergunte ao visitante quantas caixinhas de leite ou suco a família usa por semana e para onde elas vão.</li><li>Jogue a fase 2 com o visitante e mostre que reciclar vem antes de gerar energia.</li><li>Use a calculadora da fase 3 para estimar o que a escola descarta e o que daria para aproveitar.</li><li>Na fase 4, compare duas rotas para o mesmo resíduo e discuta qual faz mais sentido e por quê.</li><li>Termine com o simulador de leito, como exemplo de tecnologia estudada pelo projeto.</li></ol><p class="note" style="margin-top:8px">Dica: todas as fases ficam abertas desde o início, então dá para ir direto à parte que interessa ao visitante.</p></section>
     </div>
     <section class="card"><h3>Referências usadas no conteúdo</h3><ul style="font-size:.92rem"><li>ABRELPE. <i>Panorama dos Resíduos Sólidos no Brasil</i>, 2023.</li><li>BRASIL. Lei nº 12.305/2010, Política Nacional de Resíduos Sólidos.</li><li>CONAMA. Resolução nº 275/2001, código de cores para a coleta seletiva.</li><li>WEN, C. Y.; YU, Y. H. A generalized method for predicting the minimum fluidization velocity. <i>AIChE Journal</i>, 1966.</li><li>KUNII, D.; LEVENSPIEL, O. <i>Fluidization Engineering</i>. 2. ed. Butterworth-Heinemann, 1991.</li><li>STAM, J. Stable Fluids. <i>SIGGRAPH</i>, 1999.</li><li>MFiX (NETL), OpenFOAM e ParaView: softwares livres de CFD e visualização.</li></ul></section>
   </main>`;
@@ -1435,7 +1439,6 @@ function afterRender(){
     });
   }
   const tf = $('#tFilter'); if(tf) tf.addEventListener('change', e => { state.turma = e.target.value; render(); });
-  const tu = $('#tUnlock'); if(tu) tu.addEventListener('change', e => { store.unlockAll = e.target.checked; save(); toast(store.unlockAll ? 'Todas as fases liberadas.' : 'Fases voltam a abrir em sequência.'); });
   const ts = $('#tSound'); if(ts) ts.addEventListener('change', e => { store.sound = e.target.checked; save(); });
   if($('#calcOut')){
     document.querySelectorAll('[data-calc]').forEach(inp => inp.addEventListener('input', e => { const k = e.target.dataset.calc; CALC[k] = +e.target.value; $('#v_' + k).textContent = fmt(CALC[k]) + ' ' + e.target.dataset.unit; calcUpdate(); }));
@@ -1463,7 +1466,7 @@ document.addEventListener('click', e => {
     case 'logout': store.currentId = null; save(); run = null; state.screen = 'login'; render(); break;
     case 'sound': store.sound = !store.sound; save(); render(); break;
     case 'open': {
-      const id = +arg; if(!unlocked(cur(), id)) return;
+      const id = +arg; if(!PHASES[id - 1]) return;
       state.phase = id; state.tab = 'aprender'; run = null; state.screen = 'phase'; render(); window.scrollTo({top:0}); break; }
     case 'tab':
       if(arg === 'jogar' && (!run || run.pid !== state.phase || run.result)) startRun(state.phase);

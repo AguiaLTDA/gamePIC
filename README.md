@@ -62,7 +62,7 @@ git add . && git commit -m "Atualiza o jogo" && git push
 
 - No primeiro acesso, o painel pede para criar uma senha. Ela fica só naquele navegador.
 - O painel mostra o ranking, o acerto por fase e os itens que a turma mais erra.
-- **Modo apresentação** libera todas as fases. Use em feiras.
+- Todas as fases ficam abertas desde o início. O estudante pode começar por qualquer uma e pular as que quiser; a ordem da trilha é só uma sugestão.
 - O progresso sempre fica salvo no navegador de cada aparelho. Sem a planilha, dá para juntar a turma com **Copiar dados** (ou **Baixar .json**) em cada aparelho e **Mesclar dados** em um deles.
 
 ## Salvar no Google Sheets
