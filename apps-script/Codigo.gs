@@ -17,7 +17,9 @@
 const ABA_ALUNOS = 'Alunos';
 const ABA_FASES = 'Fases concluídas';
 const VERSAO = 2;
-const CAB_ALUNOS = ['ID', 'Nome', 'Telefone', 'Turma', 'Escola', 'Avatar', 'XP', 'Nível', 'F1 %', 'F2 %', 'F3 %', 'F4 %', 'F5 %', 'F6 %', 'Estrelas', 'Missões', 'Último acesso', 'Dados do jogo (não editar)'];
+const ABA_LGPD = 'Registro LGPD';
+const CAB_LGPD = ['Data e hora', 'Ação', 'Pedido por'];
+const CAB_ALUNOS = ['ID', 'Nome', 'Telefone', 'Turma', 'Escola', 'Idade', 'Responsável', 'Autorização em', 'Versão do termo', 'Avatar', 'XP', 'Nível', 'F1 %', 'F2 %', 'F3 %', 'F4 %', 'F5 %', 'F6 %', 'Estrelas', 'Missões', 'Último acesso', 'Dados do jogo (não editar)'];
 const CAB_FASES = ['Data e hora', 'ID', 'Nome', 'Turma', 'Escola', 'Fase', 'Acerto %', 'Estrelas', 'Tentativa'];
 const NOMES_FASES = ['', 'Conhecer os resíduos', 'Destinação correta', 'Potencial energético', 'Rotas de conversão', 'Combustíveis e produtos', 'Leito fluidizado e CFD'];
 const NIVEIS = [[0, 'Aprendiz da Reciclagem'], [120, 'Separador(a) Expert'], [300, 'Caçador(a) de Energia'], [500, 'Engenheiro(a) de Conversão'], [700, 'Mestre do Leito Fluidizado'], [880, 'Cientista Do Lixo à Luz']];
@@ -27,6 +29,7 @@ function configurar() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   prepararAba_(ss, ABA_ALUNOS, CAB_ALUNOS);
   prepararAba_(ss, ABA_FASES, CAB_FASES);
+  prepararAba_(ss, ABA_LGPD, CAB_LGPD);
   const props = PropertiesService.getScriptProperties();
   let chave = props.getProperty('CHAVE_PROFESSOR');
   if (!chave) {
@@ -54,13 +57,17 @@ function doPost(e) {
     if (corpo.acao === 'salvar') {
       const aluno = limparAluno_(corpo.aluno);
       if (!aluno) return resposta_({ ok: false, erro: 'Dados do estudante inválidos.' });
-      salvarAluno_(aluno);
+      const recusa = salvarAluno_(aluno);
+      if (recusa) return resposta_({ ok: false, erro: recusa });
       (Array.isArray(corpo.fases) ? corpo.fases.slice(0, 30) : []).forEach(function (f) { registrarFase_(aluno, f); });
       return resposta_({ ok: true });
     }
     if (corpo.acao === 'listar') {
       if (!chaveOk_(corpo.chave)) return resposta_({ ok: false, erro: 'chave' });
       return resposta_({ ok: true, alunos: listarAlunos_() });
+    }
+    if (corpo.acao === 'excluir') {
+      return resposta_(excluirAluno_(String(corpo.id || ''), String(corpo.token || ''), chaveOk_(corpo.chave)));
     }
     if (corpo.acao === 'testar') {
       return resposta_({ ok: true, chave: chaveOk_(corpo.chave), versao: VERSAO });
@@ -83,10 +90,20 @@ function salvarAluno_(a) {
     const ids = aba.getRange(2, 1, ultima - 1, 1).getValues();
     for (let i = 0; i < ids.length; i++) if (ids[i][0] === a.id) { alvo = i + 2; break; }
   }
-  // mantém o melhor resultado já gravado, caso o estudante tenha jogado em outro computador
+  let antigo = null;
   if (alvo) {
-    try { unirAluno_(a, limparAluno_(JSON.parse(aba.getRange(alvo, CAB_ALUNOS.length).getValue()))); } catch (err) {}
+    try { antigo = limparAluno_(JSON.parse(aba.getRange(alvo, CAB_ALUNOS.length).getValue())); } catch (err) {}
   }
+  if (antigo && antigo.token && antigo.token !== a.token) {
+    // envio de outro computador (ou de alguém se passando pelo estudante): o progresso é aproveitado,
+    // mas dados pessoais, autorização e chave continuam os do cadastro original
+    ['token', 'name', 'telefone', 'turma', 'escola', 'avatar', 'consent'].forEach(function (k) { a[k] = antigo[k]; });
+  }
+  // LGPD: nada é gravado sem autorização registrada; menores precisam do nome do(a) responsável
+  if (!a.consent || !a.consent.em || !a.consent.versao) return 'consentimento';
+  if (!a.consent.maior && a.consent.responsavel.length < 3) return 'consentimento';
+  // mantém o melhor resultado já gravado, caso o estudante tenha jogado em outro computador
+  unirAluno_(a, antigo);
 
   let xp = Object.keys(a.phases).reduce(function (s, k) { return s + a.phases[k].xp; }, 0);
   const missoes = Object.keys(a.missions).filter(function (k) { return a.missions[k]; }).length;
@@ -96,9 +113,37 @@ function salvarAluno_(a) {
   const pct = [1, 2, 3, 4, 5, 6].map(function (f) { const p = a.phases[f]; return p ? Math.round(p.best * 100) : ''; });
   const estrelas = Object.keys(a.phases).reduce(function (s, k) { return s + a.phases[k].stars; }, 0);
   // o apóstrofo guarda o telefone como texto, senão a planilha pode tentar ler como número
-  const linha = [a.id, texto_(a.name), a.telefone ? "'" + a.telefone : '', texto_(a.turma), texto_(a.escola), a.avatar, xp, nivel].concat(pct, [estrelas, missoes + '/3', a.last ? new Date(a.last) : '', JSON.stringify(a)]);
+  const c = a.consent;
+  const linha = [a.id, texto_(a.name), a.telefone ? "'" + a.telefone : '', texto_(a.turma), texto_(a.escola),
+    c.maior ? '18 anos ou mais' : 'Menor de 18', c.maior ? '' : texto_(c.responsavel), new Date(c.em), c.versao, a.avatar, xp, nivel]
+    .concat(pct, [estrelas, missoes + '/3', a.last ? new Date(a.last) : '', JSON.stringify(a)]);
   if (alvo) aba.getRange(alvo, 1, 1, linha.length).setValues([linha]);
   else aba.appendRow(linha);
+  return '';
+}
+
+/** Apaga o estudante das abas Alunos e Fases concluídas (direito de eliminação, art. 18 da LGPD). */
+function excluirAluno_(id, token, professor) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const aba = prepararAba_(ss, ABA_ALUNOS, CAB_ALUNOS);
+  let alvo = 0, antigo = null;
+  if (id && aba.getLastRow() > 1) {
+    const ids = aba.getRange(2, 1, aba.getLastRow() - 1, 1).getValues();
+    for (let i = 0; i < ids.length; i++) if (ids[i][0] === id) { alvo = i + 2; break; }
+  }
+  if (!alvo) return { ok: true, removido: false };
+  try { antigo = JSON.parse(aba.getRange(alvo, CAB_ALUNOS.length).getValue()); } catch (err) {}
+  const doTitular = !!(antigo && antigo.token && token && antigo.token === token);
+  if (!professor && !doTitular) return { ok: false, erro: 'token' };
+  aba.deleteRow(alvo);
+  const fases = ss.getSheetByName(ABA_FASES);
+  if (fases && fases.getLastRow() > 1) {
+    const col = fases.getRange(2, 2, fases.getLastRow() - 1, 1).getValues();
+    for (let i = col.length - 1; i >= 0; i--) if (col[i][0] === id) fases.deleteRow(i + 2);
+  }
+  // registro sem dados pessoais, para comprovar que o pedido foi atendido
+  prepararAba_(ss, ABA_LGPD, CAB_LGPD).appendRow([new Date(), 'Dados de um(a) estudante apagados', doTitular ? 'O(a) próprio(a) estudante (revogou a autorização)' : 'Professor(a)']);
+  return { ok: true, removido: true };
 }
 
 /** Copia para "novo" tudo o que "antigo" tinha de melhor. */
@@ -133,7 +178,8 @@ function listarAlunos_() {
   const aba = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABA_ALUNOS);
   if (!aba || aba.getLastRow() < 2) return [];
   return aba.getRange(2, CAB_ALUNOS.length, aba.getLastRow() - 1, 1).getValues()
-    .map(function (l) { try { return JSON.parse(l[0]); } catch (err) { return null; } })
+    // a chave de cada estudante nunca sai da planilha
+    .map(function (l) { try { const a = JSON.parse(l[0]); delete a.token; return a; } catch (err) { return null; } })
     .filter(Boolean);
 }
 
@@ -142,7 +188,9 @@ function listarAlunos_() {
 function limparAluno_(x) {
   if (!x || typeof x.id !== 'string' || !x.id || x.id.length > 160 || !x.name) return null;
   const a = {
-    id: x.id, name: String(x.name).slice(0, 40), telefone: telefone_(x.telefone), turma: String(x.turma || '').slice(0, 24), escola: String(x.escola || '').slice(0, 60), avatar: String(x.avatar || '').slice(0, 16),
+    id: x.id, token: /^[a-f0-9]{16,64}$/.test(String(x.token || '')) ? String(x.token) : '',
+    consent: x.consent && x.consent.em ? { versao: String(x.consent.versao || '').slice(0, 20), em: num_(x.consent.em, 0, 4e12), maior: !!x.consent.maior, responsavel: String(x.consent.responsavel || '').slice(0, 60) } : null,
+    name: String(x.name).slice(0, 40), telefone: telefone_(x.telefone), turma: String(x.turma || '').slice(0, 24), escola: String(x.escola || '').slice(0, 60), avatar: String(x.avatar || '').slice(0, 16),
     phases: {}, missions: {}, seen: {}, errors: {}, created: num_(x.created, 0, 4e12), last: num_(x.last, 0, 4e12)
   };
   [1, 2, 3, 4, 5, 6].forEach(function (f) {

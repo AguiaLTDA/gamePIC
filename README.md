@@ -109,6 +109,23 @@ Para testar sem mexer no código, cole a URL direto no painel. Nesse caso ela va
 
 - A planilha fica na conta Google de quem a criou e não é pública. Ninguém a vê sem que você compartilhe.
 - A URL do script fica visível no código do site. Quem tiver a URL consegue **gravar** registros, mas **não consegue ler** nada sem a chave do(a) professor(a). O script também valida e limita tudo o que recebe.
-- A planilha guarda só o que o jogo pede: nome, telefone, turma, escola, avatar e progresso. Telefone e nome de estudantes menores de idade são dados pessoais protegidos pela LGPD: combine o uso com a escola, peça a autorização dos responsáveis e não compartilhe a planilha fora da equipe. A tela de cadastro avisa que menores podem informar o telefone do(a) responsável.
+- A planilha guarda só o que o jogo pede: nome, telefone, turma, escola, avatar, autorização e progresso.
 - O telefone também fica salvo no navegador do computador onde o estudante se cadastrou. Ele aparece só no painel do(a) professor(a), protegido por senha, e nunca na tela inicial.
+
+## LGPD: autorização e direitos dos estudantes
+
+- **Termo de Consentimento e Política de Privacidade:** abre no cadastro e fica disponível em "Privacidade e LGPD", no rodapé de todas as telas. Explica quem cuida dos dados, quais dados são coletados e para quê, a base legal, onde ficam, por quanto tempo e os direitos do(a) estudante.
+- **Botão "Autorizar e começar":** o cadastro só é concluído se o estudante informar a idade e aceitar o termo. Para menores de 18 anos, o jogo exige também o nome do(a) responsável e a confirmação de que ele(a) autorizou.
+- **Modo visitante:** quem não quiser autorizar joga sem cadastro. Nada é enviado para a planilha, e o progresso some ao sair.
+- **Meus dados:** o estudante vê tudo o que o projeto guarda sobre ele, corrige o telefone (e o nome do responsável) e pode **revogar a autorização**, o que apaga os dados do computador e da planilha.
+- **Registro da autorização:** a planilha guarda idade, responsável, data e versão do termo aceito. Sem autorização, o script recusa a gravação.
+- **Chave de cada estudante:** cada cadastro recebe uma chave secreta. Sem ela, ninguém altera os dados pessoais nem apaga a linha de outro estudante. Só o(a) professor(a), com a chave do painel, também pode apagar. O progresso de quem joga em dois computadores continua sendo somado.
+- **Registro LGPD:** aba da planilha que anota cada exclusão (data e quem pediu), sem dados pessoais, para comprovar que o pedido foi atendido.
+- **Mudou o texto do termo?** Altere `TERMO_VERSAO` no `app.html`: todos terão de autorizar de novo no próximo acesso.
+- **Contato para pedidos sobre dados:** preencha `CONTATO_PRIVACIDADE` no `app.html` com um e-mail ou telefone da coordenação. Ele aparece no termo.
+
+Recomendações para a equipe:
+- Peça também o **termo assinado em papel** pelos responsáveis dos menores de idade. A marcação no jogo não substitui uma autorização formal.
+- Peça para a coordenação ou o setor jurídico da UNIVC revisarem o texto do termo.
+- Compartilhe a planilha só com quem precisa e apague os dados ao fim do projeto e da prestação de contas.
 - Excluir um estudante no painel apaga só aquele computador. Na planilha, apague a linha à mão.

@@ -292,6 +292,25 @@ textarea{min-height:110px;font-family:var(--font-mono);font-size:.8rem}
 .logos img.tall{max-height:40px}
 .sponsors.big .logos img.tall{max-height:92px}
 @media (max-width:560px){ .sponsors.big .logos img{max-height:52px} .sponsors.big .logos img.tall{max-height:72px} .sponsors.big .logos img.wide{max-height:none} .logos img{max-height:22px} .logos img.tall{max-height:34px} }
+/* Autorização LGPD */
+.consent{border:2px solid var(--line);border-radius:14px;padding:12px 14px 14px;margin:0 0 6px;display:grid;gap:12px;min-width:0}
+.consent legend{padding:0 6px}
+.consent-minor{display:grid;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:.92rem;line-height:1.4;cursor:pointer}
+.check input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--brand)}
+.ages{display:flex;flex-wrap:wrap;gap:8px}
+.ages label{display:inline-flex;gap:8px;align-items:center;border:2px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:800;font-size:.92rem;cursor:pointer}
+.ages label:has(input:checked){border-color:var(--brand);background:var(--good-bg)}
+.ages input{accent-color:var(--brand);margin:0}
+dialog.termo{width:min(720px,calc(100% - 32px));max-height:85vh;border:2px solid var(--line);border-radius:18px;padding:0;background:var(--surface);color:var(--ink)}
+dialog.termo::backdrop{background:rgba(0,0,0,.55)}
+dialog.termo .body{padding:20px 22px;overflow:auto;max-height:calc(85vh - 72px)}
+dialog.termo .foot{padding:12px 22px;border-top:2px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.termo-txt h3{font-size:1.1rem;margin:18px 0 6px}
+.termo-txt p,.termo-txt li{font-size:.95rem;max-width:70ch}
+.termo-txt p+p{margin-top:6px}
+.termo-txt ul{padding-left:1.2em;margin:4px 0}
+.termo-txt li+li{margin-top:3px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:800;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;height:100%}
 
@@ -633,7 +652,22 @@ function badgesOf(u){ return BADGES.map(b => ({...b, on: !!(u && b.t(u))})); }
 const SHEETS_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbxSvoyIGJVZ9JexVcOHrL7qkFLl5BvpC_jkqkdx70ojbV2nnliuHJsE0TK_uXq31ppEfQ/exec';
 let flushing = false;
 function sheetsUrl(){ return String(store.sheetsUrl || SHEETS_URL_PADRAO || '').trim(); }
-function cleanUser(u){ return {id:u.id, name:u.name, telefone:u.telefone || '', turma:u.turma, escola:u.escola || '', avatar:u.avatar, phases:u.phases || {}, missions:u.missions || {}, seen:u.seen || {}, errors:u.errors || {}, created:u.created || 0, last:u.last || 0}; }
+function cleanUser(u){ return {id:u.id, token:u.token || '', name:u.name, telefone:u.telefone || '', turma:u.turma, escola:u.escola || '', avatar:u.avatar, consent:u.consent || null, phases:u.phases || {}, missions:u.missions || {}, seen:u.seen || {}, errors:u.errors || {}, created:u.created || 0, last:u.last || 0}; }
+
+/* ---------- LGPD ---------- */
+// Mude a versão sempre que o texto do termo mudar: todo mundo terá de autorizar de novo.
+const TERMO_VERSAO = '2026-11';
+// E-mail ou telefone para pedidos sobre dados pessoais. Vazio = o termo indica a coordenação do projeto.
+const CONTATO_PRIVACIDADE = '';
+function hasConsent(u){ return !!u && (!!u.guest || !!(u.consent && u.consent.versao === TERMO_VERSAO && u.consent.em)); }
+// chave secreta de cada estudante: só quem a tem consegue alterar ou apagar a linha dele na planilha
+function newToken(){ const a = new Uint8Array(16); try{ crypto.getRandomValues(a); }catch(e){ for(let i = 0; i < a.length; i++) a[i] = Math.random() * 256 | 0; } return Array.from(a, b => b.toString(16).padStart(2, '0')).join(''); }
+function requestDeletion(id, auth){
+  if(!sheetsUrl()) return;
+  store.outbox = store.outbox || {};
+  store.outbox[id] = Object.assign({excluir:true, fases:[], v:1}, auth);
+  save(); flushSheets();
+}
 async function postSheets(body){
   const url = sheetsUrl(); if(!url) throw new Error('Planilha não configurada.');
   // sem cabeçalho Content-Type o navegador envia text/plain e o Apps Script aceita sem pré-verificação CORS
@@ -642,7 +676,8 @@ async function postSheets(body){
   return r.json();
 }
 function markDirty(u, fase){
-  if(!u || !sheetsUrl()) return;
+  // visitantes e quem não autorizou nunca vão para a planilha
+  if(!u || u.guest || !hasConsent(u) || !sheetsUrl()) return;
   store.outbox = store.outbox || {};
   const o = store.outbox[u.id] || (store.outbox[u.id] = {fases:[]});
   if(fase) o.fases.push(fase);
@@ -656,9 +691,16 @@ async function flushSheets(){
   try{
     for(const id of Object.keys(store.outbox)){
       const u = store.users[id], o = store.outbox[id];
-      if(!u){ delete store.outbox[id]; continue; }
+      if(o.excluir){
+        const j = await postSheets({acao:'excluir', id, token:o.token || '', chave:o.chave || ''});
+        if(!j.ok && j.erro !== 'token') throw new Error(j.erro || 'erro');
+        delete store.outbox[id]; save(); continue;
+      }
+      if(!u || u.guest || !hasConsent(u)){ delete store.outbox[id]; continue; }
       const sent = o.fases.length, v = o.v;
       const j = await postSheets({acao:'salvar', aluno:cleanUser(u), fases:o.fases.slice(0, sent)});
+      // a planilha recusou de vez (sem autorização ou chave do estudante diferente): não adianta tentar de novo
+      if(!j.ok && (j.erro === 'token' || j.erro === 'consentimento')){ delete store.outbox[id]; save(); continue; }
       if(!j.ok) throw new Error(j.erro || 'erro');
       o.fases.splice(0, sent);
       // só sai da fila se nada mudou durante o envio
@@ -683,6 +725,11 @@ window.addEventListener('online', flushSheets);
 function starsHTML(n){ let s = ''; for(let i = 0; i < 3; i++) s += i < n ? '★' : '<span class="off">★</span>'; return '<span class="stars" aria-label="' + n + ' de 3 estrelas">' + s + '</span>'; }
 
 /* ---------- estado de navegação ---------- */
+// visitantes não ficam guardados de uma visita para outra
+Object.values(store.users).forEach(u => { if(u.guest) delete store.users[u.id]; });
+// quem ainda não autorizou esta versão do termo volta para o cadastro
+if(store.currentId && !hasConsent(store.users[store.currentId])) store.currentId = null;
+save();
 const state = { screen: store.currentId && store.users[store.currentId] ? 'hub' : 'login', phase:1, tab:'aprender', avatar:AVATARS[0], teacherOk:false, confirm:null };
 let run = null;
 
@@ -696,7 +743,9 @@ function render(){
   else if(s === 'pin') html = viewTop() + viewPin();
   else if(s === 'teacher') html = viewTop() + viewTeacher();
   else if(s === 'about') html = viewTop() + viewAbout();
+  else if(s === 'privacidade') html = viewTop() + `<main class="about wrap"><section class="card termo-txt">${viewTermo()}</section></main>`;
   else if(!cur()){ state.screen = 'login'; html = viewLogin(); }
+  else if(s === 'meusdados') html = viewTop() + viewMyData();
   else if(s === 'hub') html = viewTop() + viewHub();
   else if(s === 'phase') html = viewTop() + viewPhase();
   else if(s === 'cert') html = viewTop() + viewCert();
@@ -713,7 +762,7 @@ function viewFooter(big){
       <img src="assets/logo-ppgen-ufes.png" class="tall" width="96" height="205" alt="PPGEN, Programa de Pós-Graduação em Energia da UFES">
       <img class="wide" src="assets/logo-fapes-governo-es.webp" width="1400" height="218" alt="FAPES, Fundação de Amparo à Pesquisa e Inovação do Espírito Santo; Governo do Estado do Espírito Santo, Secretaria da Ciência, Tecnologia, Inovação e Educação Profissional">
     </div>
-    <p class="note muted">Projeto PICJr 2026 · Edital FAPES/SEDU nº 17/2025</p>
+    <p class="note muted">Projeto PICJr 2026 · Edital FAPES/SEDU nº 17/2025 · <button class="linkbtn" data-act="go" data-arg="privacidade">Privacidade e LGPD</button></p>
   </div></footer>`;
 }
 
@@ -724,15 +773,16 @@ function viewTop(){
     <button class="logo" data-act="go" data-arg="${u ? 'hub' : 'login'}" aria-label="Ir para o mapa">${LOGO}<span>Do Lixo à Luz</span></button>
     <nav class="nav" aria-label="Principal">
       ${u ? nav('hub','Mapa') : nav('login','Entrar')}
+      ${u && !u.guest ? nav('meusdados','Meus dados') : ''}
       ${nav('about','Sobre o projeto')}
       ${nav('teacher','Professor(a)')}
       <button data-act="sound" aria-pressed="${store.sound}" title="Som">${store.sound ? '🔊' : '🔈'}</button>
-      ${u ? `<span class="chip"><span class="ava">${u.avatar}</span><span class="mono">${xpOf(u)} XP</span></span><button data-act="logout">Sair</button>` : ''}
+      ${u ? `<span class="chip"><span class="ava">${u.avatar}</span><span class="mono">${u.guest ? 'Visitante · ' : ''}${xpOf(u)} XP</span></span><button data-act="logout">Sair</button>` : ''}
     </nav></div></header>`;
 }
 
 function viewLogin(){
-  const users = Object.values(store.users).sort((a, b) => (b.last || 0) - (a.last || 0)).slice(0, 8);
+  const users = Object.values(store.users).filter(u => !u.guest).sort((a, b) => (b.last || 0) - (a.last || 0)).slice(0, 8);
   // num computador da escola, a próxima pessoa quase sempre é da mesma escola
   const lastEscola = (users.find(u => u.escola) || {}).escola || '';
   const escolas = [...new Set(['EEEFM Marita Motta Santos'].concat(Object.values(store.users).map(u => u.escola).filter(Boolean)))];
@@ -751,13 +801,97 @@ function viewLogin(){
         <div class="field"><label class="lbl" for="lgTurma">Turma</label><input type="text" id="lgTurma" maxlength="24" placeholder="Ex.: 1º ano A" required></div>
         <div class="field"><label class="lbl" for="lgEscola">Escola</label><input type="text" id="lgEscola" maxlength="60" list="escolas" placeholder="Ex.: EEEFM Marita Motta Santos" value="${esc(lastEscola)}" required><datalist id="escolas">${escolas.map(s => `<option value="${esc(s)}"></option>`).join('')}</datalist></div>
         <div class="field"><span class="lbl" id="avaLbl">Avatar</span><div class="ava-pick" role="group" aria-labelledby="avaLbl">${AVATARS.map((a, i) => `<button type="button" data-act="pick-ava" data-arg="${a}" aria-pressed="${a === state.avatar}" title="${AVATAR_NAMES[i]}" aria-label="${AVATAR_NAMES[i]} ${i + 1}">${a}</button>`).join('')}</div></div>
-        <p class="err" id="lgErr"></p>
-        <button class="btn" type="submit" style="width:100%">Começar a jornada</button>
+        <fieldset class="consent">
+          <legend class="lbl">Autorização para usar seus dados (LGPD)</legend>
+          <div class="ages" role="radiogroup" aria-label="Idade">
+            <label><input type="radio" name="idade" id="ageAdult" value="maior"> Tenho 18 anos ou mais</label>
+            <label><input type="radio" name="idade" id="ageMinor" value="menor"> Tenho menos de 18 anos</label>
+          </div>
+          <div id="minorBox" class="consent-minor" hidden>
+            <div class="field" style="margin:0"><label class="lbl" for="lgResp">Nome do(a) responsável</label><input type="text" id="lgResp" maxlength="60" placeholder="Ex.: Maria Souza"></div>
+            <label class="check"><input type="checkbox" id="lgRespOk"> Meu pai, minha mãe ou responsável leu o termo e autorizou o uso dos meus dados neste projeto.</label>
+          </div>
+          <label class="check"><input type="checkbox" id="lgTermo"> <span>Li e concordo com o <button type="button" class="linkbtn" data-act="termo">Termo de Consentimento e Política de Privacidade</button></span></label>
+        </fieldset>
+        <p class="err" id="lgErr" role="alert"></p>
+        <button class="btn" type="submit" style="width:100%">✔ Autorizar e começar</button>
+        <button class="btn ghost" type="button" data-act="guest" style="width:100%;margin-top:10px">Jogar como visitante, sem cadastro</button>
+        <p class="note" style="margin-top:6px;text-align:center">No modo visitante nada vai para a planilha e o progresso some quando você sai.</p>
       </form>
+      <dialog class="termo" id="termoDlg" aria-labelledby="termoTitle">
+        <div class="body termo-txt">${viewTermo()}</div>
+        <div class="foot"><button class="btn ghost small" type="button" data-act="termo-close">Fechar</button><button class="btn small" type="button" data-act="termo-ok">Li e concordo</button></div>
+      </dialog>
       ${users.length ? `<p class="eyebrow" style="margin-top:20px">Já jogou neste computador?</p><div class="quick">${users.map(u => `<button data-act="quick" data-arg="${esc(u.id)}"><span class="ava">${u.avatar}</span>${esc(u.name)} <small class="muted">${esc(u.turma)}</small></button>`).join('')}</div>` : ''}
       <p style="margin-top:18px;font-size:.92rem" class="muted">Professor(a)? <button class="linkbtn" data-act="go" data-arg="teacher">Abrir o painel de gestão</button> · <button class="linkbtn" data-act="go" data-arg="about">Sobre o projeto</button></p>
     </section>
   </div></main>`;
+}
+
+function viewTermo(){
+  const contato = CONTATO_PRIVACIDADE ? `pelo contato <b>${esc(CONTATO_PRIVACIDADE)}</b> ou ` : '';
+  return `<p class="eyebrow">Versão ${TERMO_VERSAO}</p>
+  <h2 id="termoTitle" style="font-size:1.6rem;margin:4px 0 8px">Termo de Consentimento e Política de Privacidade</h2>
+  <p>Este termo explica, em linguagem simples, quais dados o jogo <b>Do Lixo à Luz</b> coleta, para quê e quais são os seus direitos, conforme a Lei Geral de Proteção de Dados Pessoais (LGPD, Lei nº 13.709/2018).</p>
+  <h3>1. Quem cuida dos dados</h3>
+  <p>O projeto de iniciação científica júnior <i>Introdução à Simulação Computacional para Aproveitamento Energético de Resíduos Sólidos</i>, executado pela UNIVC (Centro Universitário Vale do Cricaré, São Mateus/ES) com apoio da FAPES (Edital FAPES/SEDU nº 17/2025). Coordenação: Prof. Estevão Luiz de Oliveira Gonçalves.</p>
+  <h3>2. Quais dados coletamos</h3>
+  <ul><li>Nome, telefone, turma e escola.</li><li>Se você tem 18 anos ou mais e, para menores, o nome do(a) responsável que autorizou.</li><li>Avatar escolhido, respostas e desempenho no jogo (fases, acertos, erros, pontos) e datas de acesso.</li></ul>
+  <p><b>Não coletamos</b> CPF, endereço, e-mail, fotos, localização nem dados sensíveis (saúde, religião, origem racial etc.).</p>
+  <h3>3. Para que usamos</h3>
+  <ul><li>Acompanhar a aprendizagem e as atividades do projeto.</li><li>Entrar em contato, por telefone ou WhatsApp, sobre atividades do projeto.</li><li>Fazer relatórios e apresentações do projeto <b>somente com números agregados ou anônimos</b>: nenhum nome ou telefone aparece em relatórios, apresentações ou publicações.</li></ul>
+  <p>Os dados <b>não</b> são vendidos, não são usados para propaganda e não são compartilhados com outras empresas ou pessoas fora da equipe do projeto.</p>
+  <h3>4. Base legal</h3>
+  <p>Usamos os dados com base no seu <b>consentimento</b> (art. 7º, I, da LGPD). Para estudantes com menos de 18 anos, exigimos também a autorização de pai, mãe ou responsável e tratamos os dados sempre no melhor interesse do(a) estudante (art. 14).</p>
+  <h3>5. Onde ficam e quem acessa</h3>
+  <ul><li>No navegador do computador ou celular usado no cadastro (armazenamento local).</li><li>Em uma planilha do Google Sheets da equipe do projeto. O Google apenas armazena os dados, sob as regras dele de segurança.</li><li>Só a coordenação e os(as) professores(as) do projeto acessam, com senha e chave próprias. Outros estudantes não veem seus dados.</li></ul>
+  <h3>6. Por quanto tempo</h3>
+  <p>Durante o projeto (2026) e o período de prestação de contas à FAPES. Depois, os dados são apagados ou tornados anônimos.</p>
+  <h3>7. Seus direitos</h3>
+  <p>A qualquer momento, sem custo e sem nenhum prejuízo para você na escola, você pode:</p>
+  <ul><li>ver quais dados temos sobre você;</li><li>corrigir dados errados;</li><li><b>revogar esta autorização</b> e pedir que seus dados sejam apagados;</li><li>saber com quem os dados foram compartilhados.</li></ul>
+  <p>Faça isso na tela <b>Meus dados</b> do jogo, ${contato}falando com a coordenação do projeto na UNIVC ou com o(a) professor(a) responsável na sua escola.</p>
+  <h3>8. Se você não quiser autorizar</h3>
+  <p>Tudo bem. Você pode jogar no <b>modo visitante</b>, sem cadastro: nenhum dado vai para a planilha e o progresso some quando você sai.</p>
+  <h3>9. Segurança</h3>
+  <p>Coletamos o mínimo de dados necessário, protegemos o acesso com senha e chave e não publicamos a planilha. Se houver algum incidente de segurança, a coordenação avisará os(as) estudantes, os responsáveis e a escola.</p>
+  <h3>10. Estudantes menores de idade</h3>
+  <p>A autorização marcada no jogo deve refletir uma autorização real do(a) responsável. A escola ou o projeto podem pedir, além disso, um termo assinado em papel.</p>`;
+}
+
+function viewMyData(){
+  const u = cur();
+  if(u.guest) return `<main class="about wrap"><section class="card"><h2>Modo visitante</h2><p style="margin-top:8px">Você está jogando sem cadastro: nenhum dado seu foi enviado para a planilha e o progresso some quando você sair.</p></section></main>`;
+  const c = u.consent || {};
+  const row = (k, v) => `<tr><th scope="row" style="text-transform:none;letter-spacing:0;font-size:.9rem">${k}</th><td>${v}</td></tr>`;
+  const cf = state.confirm === 'revoke';
+  return `<main class="about wrap">
+    <div><p class="eyebrow">LGPD · seus direitos</p><h1 style="font-size:clamp(1.8rem,4.5vw,2.6rem);margin-top:6px">Meus dados</h1></div>
+    <div class="two">
+      <section class="card"><h3>O que o projeto guarda sobre você</h3>
+        <div class="tbl-wrap"><table><tbody>
+          ${row('Nome', esc(u.name))}${row('Telefone', esc(u.telefone || '–'))}${row('Turma', esc(u.turma))}${row('Escola', esc(u.escola || '–'))}${row('Avatar', u.avatar)}
+          ${row('Idade', c.maior ? '18 anos ou mais' : 'Menos de 18 anos')}${c.maior ? '' : row('Responsável que autorizou', esc(c.responsavel || '–'))}
+          ${row('Autorização dada em', c.em ? new Date(c.em).toLocaleString('pt-BR') + ` (termo versão ${esc(c.versao)})` : '–')}
+          ${row('Progresso no jogo', `${xpOf(u)} XP, ${PHASES.filter(p => done(u, p.id)).length} de 6 fases, respostas certas e erradas de cada desafio`)}
+        </tbody></table></div>
+        <p class="note" style="margin-top:8px">Esses dados ficam neste navegador e na planilha da equipe do projeto. <button class="linkbtn" data-act="go" data-arg="privacidade">Ler o termo completo</button></p>
+      </section>
+      <section class="card"><h3>Corrigir dados</h3>
+        <form id="fixForm" novalidate>
+          <div class="field"><label class="lbl" for="fxTel">Telefone</label><input type="tel" id="fxTel" inputmode="numeric" maxlength="16" value="${esc(u.telefone || '')}"></div>
+          ${c.maior ? '' : `<div class="field"><label class="lbl" for="fxResp">Nome do(a) responsável</label><input type="text" id="fxResp" maxlength="60" value="${esc(c.responsavel || '')}"></div>`}
+          <button class="btn small" type="submit">Salvar correção</button>
+        </form>
+        <p class="note" style="margin-top:10px">Para corrigir nome, turma ou escola, peça ao(à) professor(a): eles identificam seu cadastro.</p>
+      </section>
+    </div>
+    <section class="card"><h3>Revogar a autorização e apagar meus dados</h3>
+      <p style="margin:6px 0 12px">Seus dados serão apagados deste navegador e da planilha do projeto, inclusive o progresso no jogo. Isso não pode ser desfeito e não traz nenhum prejuízo para você na escola.</p>
+      <button class="btn ${cf ? 'danger' : 'ghost'}" data-act="revoke">${cf ? 'Confirmar: apagar tudo' : 'Revogar e apagar meus dados'}</button>
+      ${cf ? '<button class="btn ghost" data-act="go" data-arg="meusdados" style="margin-left:8px">Cancelar</button>' : ''}
+    </section>
+  </main>`;
 }
 
 function viewHub(){
@@ -1290,7 +1424,7 @@ function viewPin(){
 
 function viewTeacher(){
   if(!state.teacherOk){ state.screen = 'pin'; return viewPin(); }
-  const all = Object.values(store.users);
+  const all = Object.values(store.users).filter(u => !u.guest);
   const turmas = [...new Set(all.map(u => u.turma))].sort();
   const f = state.turma || '';
   const us = all.filter(u => !f || u.turma === f).sort((a, b) => xpOf(b) - xpOf(a));
@@ -1312,8 +1446,8 @@ function viewTeacher(){
       <div class="stat"><b>${complete}</b><span>jornadas completas</span></div>
     </div>
     <section class="card"><h3 style="font-size:1.3rem;margin-bottom:8px">Estudantes</h3>
-      ${us.length ? `<div class="tbl-wrap"><table><thead><tr><th>Estudante</th><th>Telefone</th><th>Turma</th><th>Escola</th><th>Nível</th><th>XP</th>${PHASES.map(p => `<th title="${p.title}">F${p.id}</th>`).join('')}<th>Missões</th><th>Último acesso</th><th></th></tr></thead><tbody>
-      ${us.map(u => `<tr><td style="white-space:nowrap"><span class="ava" style="display:inline-grid;width:26px;height:26px;font-size:.9rem;vertical-align:middle">${u.avatar}</span> <b>${esc(u.name)}</b></td><td class="mono" style="white-space:nowrap">${esc(u.telefone || '–')}</td><td>${esc(u.turma)}</td><td>${esc(u.escola || '–')}</td><td>${levelOf(xpOf(u)).i + 1}</td><td class="mono">${xpOf(u)}</td>${PHASES.map(p => { const x = u.phases[p.id]; return `<td class="mono" title="${x ? Math.round(x.best * 100) + '% · ' + x.attempts + ' tentativa(s)' : ''}">${x ? Math.round(x.best * 100) + '%' : '–'}</td>`; }).join('')}<td class="mono">${Object.values(u.missions || {}).filter(Boolean).length}/3</td><td class="muted" style="white-space:nowrap">${u.last ? new Date(u.last).toLocaleDateString('pt-BR') : '–'}</td><td><button class="btn ${cf === 'del:' + u.id ? 'danger' : 'ghost'} small" data-act="deluser" data-arg="${esc(u.id)}">${cf === 'del:' + u.id ? 'Confirmar' : 'Excluir'}</button></td></tr>`).join('')}
+      ${us.length ? `<div class="tbl-wrap"><table><thead><tr><th>Estudante</th><th>Telefone</th><th>Turma</th><th>Escola</th><th>Autorização</th><th>Nível</th><th>XP</th>${PHASES.map(p => `<th title="${p.title}">F${p.id}</th>`).join('')}<th>Missões</th><th>Último acesso</th><th></th></tr></thead><tbody>
+      ${us.map(u => `<tr><td style="white-space:nowrap"><span class="ava" style="display:inline-grid;width:26px;height:26px;font-size:.9rem;vertical-align:middle">${u.avatar}</span> <b>${esc(u.name)}</b></td><td class="mono" style="white-space:nowrap">${esc(u.telefone || '–')}</td><td>${esc(u.turma)}</td><td>${esc(u.escola || '–')}</td><td style="white-space:nowrap">${consentLabel(u)}</td><td>${levelOf(xpOf(u)).i + 1}</td><td class="mono">${xpOf(u)}</td>${PHASES.map(p => { const x = u.phases[p.id]; return `<td class="mono" title="${x ? Math.round(x.best * 100) + '% · ' + x.attempts + ' tentativa(s)' : ''}">${x ? Math.round(x.best * 100) + '%' : '–'}</td>`; }).join('')}<td class="mono">${Object.values(u.missions || {}).filter(Boolean).length}/3</td><td class="muted" style="white-space:nowrap">${u.last ? new Date(u.last).toLocaleDateString('pt-BR') : '–'}</td><td><button class="btn ${cf === 'del:' + u.id ? 'danger' : 'ghost'} small" data-act="deluser" data-arg="${esc(u.id)}">${cf === 'del:' + u.id ? 'Confirmar' : 'Excluir'}</button></td></tr>`).join('')}
       </tbody></table></div>` : '<p class="muted">Nenhum estudante ainda. Peça para a turma entrar pela tela inicial neste computador, ou importe os dados de outros computadores abaixo.</p>'}
     </section>
     <div class="two">
@@ -1351,13 +1485,22 @@ function viewTeacher(){
   </main>`;
 }
 
+function consentLabel(u){
+  const c = u.consent;
+  if(!c || !c.em) return '<span style="color:var(--bad);font-weight:800">pendente</span>';
+  const quando = new Date(c.em).toLocaleDateString('pt-BR');
+  const quem = c.maior ? '18+' : 'Resp.: ' + esc(c.responsavel || '?');
+  return `${quem} · ${quando}${c.versao !== TERMO_VERSAO ? ' <span style="color:var(--bad)">(termo antigo)</span>' : ''}`;
+}
+function cleanConsent(c){ return c && c.em ? {versao:String(c.versao || '').slice(0, 20), em:+c.em || 0, maior:!!c.maior, responsavel:String(c.responsavel || '').slice(0, 60)} : null; }
+
 function mergeUsers(inc){
   let n = 0;
   Object.values(inc || {}).forEach(x => {
     if(!x || !x.id || !x.name) return;
     const y = store.users[x.id];
-    if(y && (x.last || 0) >= (y.last || 0)){ if(x.telefone) y.telefone = fmtPhone(x.telefone); if(x.escola) y.escola = String(x.escola).slice(0, 60); }
-    if(!y){ store.users[x.id] = {id:x.id, name:String(x.name).slice(0, 40), telefone:x.telefone ? fmtPhone(x.telefone) : '', turma:String(x.turma || '').slice(0, 24), escola:String(x.escola || '').slice(0, 60), avatar:AVATARS.includes(x.avatar) ? x.avatar : AVATARS[0], phases:x.phases || {}, missions:x.missions || {}, seen:x.seen || {}, errors:x.errors || {}, created:x.created || Date.now(), last:x.last || 0}; n++; return; }
+    if(y && (x.last || 0) >= (y.last || 0)){ if(x.telefone) y.telefone = fmtPhone(x.telefone); if(x.escola) y.escola = String(x.escola).slice(0, 60); if(cleanConsent(x.consent)) y.consent = cleanConsent(x.consent); }
+    if(!y){ store.users[x.id] = {id:x.id, consent:cleanConsent(x.consent), name:String(x.name).slice(0, 40), telefone:x.telefone ? fmtPhone(x.telefone) : '', turma:String(x.turma || '').slice(0, 24), escola:String(x.escola || '').slice(0, 60), avatar:AVATARS.includes(x.avatar) ? x.avatar : AVATARS[0], phases:x.phases || {}, missions:x.missions || {}, seen:x.seen || {}, errors:x.errors || {}, created:x.created || Date.now(), last:x.last || 0}; n++; return; }
     Object.entries(x.phases || {}).forEach(([k, p]) => { const q = y.phases[k]; if(!q || (p.xp || 0) > (q.xp || 0) || (p.best || 0) > (q.best || 0)) y.phases[k] = {xp:Math.max(p.xp || 0, q ? q.xp : 0), stars:Math.max(p.stars || 0, q ? q.stars : 0), best:Math.max(p.best || 0, q ? q.best : 0), attempts:Math.max(p.attempts || 0, q ? q.attempts : 0), last:p.last, at:p.at}; });
     y.missions = y.missions || {}; Object.entries(x.missions || {}).forEach(([k, v]) => { if(v) y.missions[k] = true; });
     ['seen', 'errors'].forEach(f => { y[f] = y[f] || {}; Object.entries(x[f] || {}).forEach(([k, v]) => y[f][k] = Math.max(y[f][k] || 0, v)); });
@@ -1408,6 +1551,7 @@ function afterRender(){
   const lf = $('#loginForm');
   if(lf){
     $('#lgTel').addEventListener('input', e => { e.target.value = fmtPhone(e.target.value); });
+    document.querySelectorAll('input[name="idade"]').forEach(r => r.addEventListener('change', () => { $('#minorBox').hidden = !$('#ageMinor').checked; }));
     lf.addEventListener('submit', e => {
       e.preventDefault();
       const clean = s => s.trim().replace(/\s+/g, ' ');
@@ -1417,6 +1561,12 @@ function afterRender(){
       if(tel.length < 10) return fail('Escreva o telefone com DDD, por exemplo (27) 99999-9999.', '#lgTel');
       if(!turma) return fail('Escreva sua turma, por exemplo “1º ano A”.', '#lgTurma');
       if(escola.length < 3) return fail('Escreva o nome da sua escola.', '#lgEscola');
+      const age = document.querySelector('input[name="idade"]:checked');
+      if(!age) return fail('Marque se você tem 18 anos ou mais ou menos de 18.', '#ageAdult');
+      const maior = age.value === 'maior', resp = clean($('#lgResp').value);
+      if(!maior && resp.length < 3) return fail('Escreva o nome do(a) responsável que autorizou.', '#lgResp');
+      if(!maior && !$('#lgRespOk').checked) return fail('Menores de 18 anos precisam da autorização do(a) responsável. Sem ela, jogue como visitante.', '#lgRespOk');
+      if(!$('#lgTermo').checked) return fail('Para se cadastrar, leia e aceite o termo. Se preferir não aceitar, jogue como visitante.', '#lgTermo');
       const id = slug(name) + '|' + slug(turma) + '|' + slug(escola);
       let u = store.users[id];
       // cadastros antigos (só nome + turma) passam para o novo formato sem perder o progresso
@@ -1430,8 +1580,30 @@ function afterRender(){
       }
       if(!u) u = store.users[id] = {id, name, turma, phases:{}, missions:{}, seen:{}, errors:{}, created:Date.now()};
       Object.assign(u, {avatar:state.avatar, telefone:fmtPhone(tel), escola});
+      // registro da autorização: guarda a data original enquanto as respostas e a versão do termo não mudarem
+      const prev = u.consent, respSalvo = maior ? '' : resp;
+      const same = prev && prev.versao === TERMO_VERSAO && prev.maior === maior && (prev.responsavel || '') === respSalvo;
+      u.consent = same ? prev : {versao:TERMO_VERSAO, em:Date.now(), maior, responsavel:respSalvo};
+      u.token = u.token || newToken();
       u.last = Date.now(); store.currentId = id; save(); markDirty(u);
       state.screen = 'hub'; render(); window.scrollTo({top:0});
+    });
+  }
+  const ff = $('#fixForm');
+  if(ff){
+    $('#fxTel').addEventListener('input', e => { e.target.value = fmtPhone(e.target.value); });
+    ff.addEventListener('submit', e => {
+      e.preventDefault();
+      const u = cur(), tel = phoneDigits($('#fxTel').value);
+      if(tel.length < 10){ toast('Escreva o telefone com DDD, por exemplo (27) 99999-9999.'); return; }
+      u.telefone = fmtPhone(tel);
+      const r = $('#fxResp');
+      if(r){
+        const resp = r.value.trim().replace(/\s+/g, ' ');
+        if(resp.length < 3){ toast('Escreva o nome do(a) responsável.'); return; }
+        u.consent = Object.assign({}, u.consent, {responsavel:resp});
+      }
+      u.last = Date.now(); save(); markDirty(u); toast('Dados corrigidos.'); render();
     });
   }
   const pf = $('#pinForm');
@@ -1474,7 +1646,7 @@ function afterRender(){
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if(!el) return;
   const act = el.dataset.act, arg = el.dataset.arg;
-  if(act !== 'deluser' && act !== 'resetall') state.confirm = null;
+  if(act !== 'deluser' && act !== 'resetall' && act !== 'revoke') state.confirm = null;
   switch(act){
     case 'go':
       if(arg === 'teacher'){ state.screen = state.teacherOk ? 'teacher' : 'pin'; }
@@ -1485,17 +1657,42 @@ document.addEventListener('click', e => {
       state.avatar = arg; document.querySelectorAll('.ava-pick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === arg)); break;
     case 'quick': {
       const u = store.users[arg]; if(!u) return;
-      if(!u.telefone || !u.escola){
+      if(!u.telefone || !u.escola || !hasConsent(u)){
         // cadastro antigo: preenche o que já sabemos e pede o resto (o telefone nunca é preenchido por outra pessoa)
         $('#lgName').value = u.name; $('#lgTurma').value = u.turma; $('#lgEscola').value = u.escola || $('#lgEscola').value;
         state.avatar = u.avatar; document.querySelectorAll('.ava-pick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.arg === u.avatar));
         state.completing = u.id;
-        $('#lgErr').textContent = 'Complete seu cadastro com telefone e escola para continuar.';
-        $(u.telefone ? '#lgEscola' : '#lgTel').focus();
+        $('#lgErr').textContent = 'Para continuar, confira seus dados, digite o telefone e dê a autorização no fim do formulário.';
+        $('#lgTel').focus();
         break;
       }
       u.last = Date.now(); store.currentId = arg; save(); markDirty(u); state.screen = 'hub'; render(); window.scrollTo({top:0}); break; }
-    case 'logout': store.currentId = null; save(); run = null; state.screen = 'login'; render(); break;
+    case 'logout': { const u = cur(); if(u && u.guest) delete store.users[u.id]; store.currentId = null; save(); run = null; state.screen = 'login'; render(); break; }
+    case 'termo': $('#termoDlg').showModal(); break;
+    case 'termo-close': $('#termoDlg').close(); break;
+    case 'termo-ok': $('#lgTermo').checked = true; $('#termoDlg').close(); $('#lgTermo').focus(); break;
+    case 'guest': {
+      const id = 'visitante|' + Date.now();
+      store.users[id] = {id, guest:true, name:($('#lgName').value.trim() || 'Visitante').slice(0, 40), turma:'Visitante', avatar:state.avatar, phases:{}, missions:{}, seen:{}, errors:{}, created:Date.now(), last:Date.now()};
+      store.currentId = id; save(); state.screen = 'hub'; render(); window.scrollTo({top:0}); toast('Modo visitante: nada será enviado para a planilha.');
+      break; }
+    case 'revoke': {
+      const u = cur(); if(!u || u.guest) break;
+      if(state.confirm !== 'revoke'){ state.confirm = 'revoke'; render(); break; }
+      state.confirm = null;
+      const id = u.id, token = u.token || '';
+      delete store.users[id]; if(store.outbox) delete store.outbox[id]; store.currentId = null; save(); run = null;
+      state.screen = 'login'; render(); window.scrollTo({top:0});
+      if(!sheetsUrl()){ toast('Autorização revogada. Seus dados foram apagados deste computador.'); break; }
+      const outroPc = 'Apagamos seus dados deste computador. Seu cadastro na planilha foi feito em outro computador: peça ao(à) professor(a) para apagá-lo.';
+      postSheets({acao:'excluir', id, token}).then(j => {
+        toast(j.ok ? 'Autorização revogada. Seus dados foram apagados deste computador e da planilha.' : j.erro === 'token' ? outroPc : 'Apagamos deste computador. A planilha respondeu: ' + j.erro);
+      }).catch(() => {
+        // sem internet: o pedido fica na fila e sai quando a conexão voltar
+        requestDeletion(id, {token});
+        toast('Autorização revogada. Seus dados foram apagados deste computador; a planilha será atualizada quando a internet voltar.');
+      });
+      break; }
     case 'sound': store.sound = !store.sound; save(); render(); break;
     case 'open': {
       const id = +arg; if(!PHASES[id - 1]) return;
@@ -1518,7 +1715,11 @@ document.addEventListener('click', e => {
       break; }
     case 'tlock': state.teacherOk = false; state.screen = cur() ? 'hub' : 'login'; render(); break;
     case 'deluser':
-      if(state.confirm === 'del:' + arg){ delete store.users[arg]; if(store.currentId === arg) store.currentId = null; save(); state.confirm = null; toast('Estudante excluído.'); }
+      if(state.confirm === 'del:' + arg){
+        delete store.users[arg]; if(store.currentId === arg) store.currentId = null; save(); state.confirm = null;
+        if(sheetsUrl() && store.sheetsKey){ requestDeletion(arg, {chave:store.sheetsKey}); toast('Estudante excluído deste computador e da planilha.'); }
+        else toast('Estudante excluído deste computador. Para apagar também da planilha, salve a chave do(a) professor(a) na seção da planilha.');
+      }
       else state.confirm = 'del:' + arg;
       render(); break;
     case 'resetall':
